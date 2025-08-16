@@ -4,26 +4,27 @@ import { getModelsByUserId } from '@/lib/db/models'
 import { GalleryInterface } from '@/components/gallery/gallery-interface'
 
 interface GalleryPageProps {
-  searchParams: {
+  searchParams: Promise<{
     model?: string
     generation?: string
     search?: string
     page?: string
     sort?: string
     view?: string
-  }
+  }>
 }
 
 export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   const session = await requireAuth()
   const userId = session.user.id
 
-  const page = parseInt(searchParams.page || '1')
+  const params = await searchParams
+  const page = parseInt(params.page || '1')
   const limit = 20
-  const modelFilter = searchParams.model
-  const searchQuery = searchParams.search
-  const sortBy = searchParams.sort || 'newest'
-  const viewMode = searchParams.view || 'grid'
+  const modelFilter = params.model
+  const searchQuery = params.search
+  const sortBy = params.sort || 'newest'
+  const viewMode = params.view || 'grid'
 
   // Get user's models for filtering
   const models = await getModelsByUserId(userId)

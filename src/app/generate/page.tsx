@@ -5,9 +5,9 @@ import { redirect } from 'next/navigation'
 import { GenerationInterface } from '@/components/generation/generation-interface'
 
 interface GeneratePageProps {
-  searchParams: {
+  searchParams: Promise<{
     model?: string
-  }
+  }>
 }
 
 export default async function GeneratePage({ searchParams }: GeneratePageProps) {
@@ -25,9 +25,11 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
   // Check if user has enough credits
   const canUseCredits = await canUserUseCredits(userId, 1)
   
+  const params = await searchParams
+  
   // Select model (from URL param or first available)
-  const selectedModelId = searchParams.model && models.find(m => m.id === searchParams.model) 
-    ? searchParams.model 
+  const selectedModelId = params.model && models.find(m => m.id === params.model) 
+    ? params.model 
     : models[0].id
 
   return (
