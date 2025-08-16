@@ -4,7 +4,7 @@ import { getModelById, deleteModel, updateModelStatus } from '@/lib/db/models'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession()
@@ -16,7 +16,8 @@ export async function GET(
       )
     }
 
-    const model = await getModelById(params.id, session.user.id)
+    const { id } = await params
+    const model = await getModelById(id, session.user.id)
     
     if (!model) {
       return NextResponse.json(
@@ -38,7 +39,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession()
@@ -53,8 +54,10 @@ export async function PUT(
     const body = await request.json()
     const { status, progress, errorMessage } = body
 
+    const { id } = await params
+    
     // Verify user owns the model
-    const existingModel = await getModelById(params.id, session.user.id)
+    const existingModel = await getModelById(id, session.user.id)
     if (!existingModel) {
       return NextResponse.json(
         { error: 'Model not found' },
@@ -63,7 +66,7 @@ export async function PUT(
     }
 
     const updatedModel = await updateModelStatus(
-      params.id,
+      id,
       status,
       progress,
       errorMessage
@@ -85,7 +88,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession()
@@ -97,8 +100,10 @@ export async function DELETE(
       )
     }
 
+    const { id } = await params
+    
     // Verify user owns the model before deleting
-    const existingModel = await getModelById(params.id, session.user.id)
+    const existingModel = await getModelById(id, session.user.id)
     if (!existingModel) {
       return NextResponse.json(
         { error: 'Model not found' },
@@ -106,7 +111,7 @@ export async function DELETE(
       )
     }
 
-    await deleteModel(params.id, session.user.id)
+    await deleteModel(id, session.user.id)
 
     return NextResponse.json({ 
       success: true,
