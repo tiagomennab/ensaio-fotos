@@ -11,14 +11,14 @@ import { ModelStats } from '@/components/models/model-stats'
 import { formatDate } from '@/lib/utils'
 
 interface ModelPageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export default async function ModelPage({ params }: ModelPageProps) {
   const session = await requireAuth()
-  const modelId = params.id
+  const { id: modelId } = await params
 
   const model = await getModelById(modelId, session.user.id)
   
