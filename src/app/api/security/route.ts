@@ -1,0 +1,173 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/auth'
+import { RateLimiter } from '@/lib/security/rate-limiter'
+import { ContentModerator } from '@/lib/security/content-moderator'
+
+// Security monitoring and administration API
+export async function GET(request: NextRequest) {
+  try {
+    const session = await requireAuth()
+    const { searchParams } = new URL(request.url)
+    const action = searchParams.get('action')
+
+    // Only allow admins to access security data
+    // In production, add proper admin role check
+    if (session.user.email !== 'admin@ensaiofotos.com') {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 403 }
+      )
+    }
+
+    switch (action) {
+      case 'system-stats':
+        const systemStats = await RateLimiter.getSystemStats()
+        return NextResponse.json({
+          success: true,
+          data: systemStats
+        })
+
+      case 'violation-stats':
+        const userId = searchParams.get('userId') || undefined
+        const violationStats = await ContentModerator.getViolationStats(userId)
+        return NextResponse.json({
+          success: true,
+          data: violationStats
+        })
+
+      case 'user-status':
+        const targetUserId = searchParams.get('userId')
+        if (!targetUserId) {
+          return NextResponse.json(
+            { error: 'User ID required' },
+            { status: 400 }
+          )
+        }
+
+        const [userStatus, rateLimitStats] = await Promise.all([
+          ContentModerator.checkUserStatus(targetUserId),
+          RateLimiter.getUsageStats(targetUserId)
+        ])
+
+        return NextResponse.json({
+          success: true,
+          data: {
+            ...userStatus,
+            rateLimits: rateLimitStats
+          }
+        })
+
+      case 'blocked-users':
+        // Get list of currently blocked users
+        const blockedUsers = await RateLimiter.getSystemStats()
+        return NextResponse.json({
+          success: true,
+          data: {
+            topUsers: blockedUsers.topUsers.filter(user => user.count > 50) // High violation users
+          }
+        })
+
+      default:
+        return NextResponse.json(
+          { error: 'Invalid action' },
+          { status: 400 }
+        )
+    }
+  } catch (error) {
+    console.error('Security API error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+// Admin actions for user management
+export async function POST(request: NextRequest) {
+  try {
+    const session = await requireAuth()
+    const body = await request.json()
+    const { action, userId, reason } = body
+
+    // Only allow admins to perform actions
+    if (session.user.email !== 'admin@ensaiofotos.com') {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 403 }
+      )
+    }
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'User ID required' },
+        { status: 400 }
+      )
+    }
+
+    switch (action) {
+      case 'ban-user':
+        const { prisma } = await import('@/lib/db')
+        await prisma.user.update({
+          where: { id: userId },
+          data: {
+            status: 'BANNED',
+            banReason: reason || 'Violation of terms of service'
+          }
+        })
+
+        return NextResponse.json({
+          success: true,
+          message: 'User banned successfully'
+        })
+
+      case 'unban-user':
+        const { prisma: prisma2 } = await import('@/lib/db')
+        await prisma2.user.update({
+          where: { id: userId },
+          data: {
+            status: 'ACTIVE',
+            banReason: null
+          }
+        })
+
+        return NextResponse.json({
+          success: true,
+          message: 'User unbanned successfully'
+        })
+
+      case 'restrict-user':
+        const { prisma: prisma3 } = await import('@/lib/db')
+        await prisma3.user.update({
+          where: { id: userId },
+          data: {
+            status: 'RESTRICTED',
+            banReason: reason || 'Account under review'
+          }
+        })
+
+        return NextResponse.json({
+          success: true,
+          message: 'User restricted successfully'
+        })
+
+      case 'cleanup-logs':
+        await RateLimiter.cleanupOldLogs()
+        return NextResponse.json({
+          success: true,
+          message: 'Old logs cleaned up successfully'
+        })
+
+      default:
+        return NextResponse.json(
+          { error: 'Invalid action' },
+          { status: 400 }
+        )
+    }
+  } catch (error) {
+    console.error('Security action error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
