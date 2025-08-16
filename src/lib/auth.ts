@@ -2,6 +2,24 @@ import { getServerSession } from 'next-auth/next'
 import { redirect } from 'next/navigation'
 import { NextAuthOptions } from 'next-auth'
 
+export const authOptions: NextAuthOptions = {
+  providers: [],
+  callbacks: {
+    jwt: ({ token, user }) => {
+      if (user) {
+        token.id = user.id
+      }
+      return token
+    },
+    session: ({ session, token }) => {
+      if (token) {
+        session.user.id = token.id as string
+      }
+      return session
+    },
+  },
+}
+
 export async function getSession() {
   return await getServerSession()
 }

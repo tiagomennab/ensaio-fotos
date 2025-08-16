@@ -202,6 +202,7 @@ const asaas = new AsaasAPI({
 })
 
 export { asaas, AsaasAPI }
+export { AsaasAPI as AsaasClient }
 
 // Helper functions for our SaaS
 export const PLAN_PRICES = {

@@ -4,7 +4,7 @@ import { getGenerationById, updateGenerationStatus } from '@/lib/db/generations'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession()
@@ -16,7 +16,8 @@ export async function GET(
       )
     }
 
-    const generation = await getGenerationById(params.id, session.user.id)
+    const { id } = await params
+    const generation = await getGenerationById(id, session.user.id)
     
     if (!generation) {
       return NextResponse.json(
@@ -38,7 +39,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession()
@@ -53,8 +54,10 @@ export async function PUT(
     const body = await request.json()
     const { status, imageUrls, thumbnailUrls, errorMessage, processingTime } = body
 
+    const { id } = await params
+    
     // Verify user owns the generation
-    const existingGeneration = await getGenerationById(params.id, session.user.id)
+    const existingGeneration = await getGenerationById(id, session.user.id)
     if (!existingGeneration) {
       return NextResponse.json(
         { error: 'Generation not found' },
@@ -63,7 +66,7 @@ export async function PUT(
     }
 
     const updatedGeneration = await updateGenerationStatus(
-      params.id,
+      id,
       status,
       imageUrls,
       thumbnailUrls,
