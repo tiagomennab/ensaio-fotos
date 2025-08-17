@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
 async function cleanupOldLogs(): Promise<void> {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
   
-  const result = await prisma.systemLog.deleteMany({
+  const result = await prisma.usageLog.deleteMany({
     where: {
       createdAt: {
         lt: thirtyDaysAgo
@@ -116,33 +116,9 @@ async function cleanupOldGenerations(): Promise<void> {
 }
 
 async function cleanupOrphanedFiles(): Promise<void> {
-  // Find training photos without associated models
-  const orphanedPhotos = await prisma.trainingPhoto.findMany({
-    where: {
-      model: null
-    },
-    where: {
-      createdAt: {
-        lt: new Date(Date.now() - 24 * 60 * 60 * 1000) // 1 day old
-      }
-    }
-  })
-
-  if (orphanedPhotos.length > 0) {
-    // Delete orphaned photos from database
-    const result = await prisma.trainingPhoto.deleteMany({
-      where: {
-        id: {
-          in: orphanedPhotos.map(photo => photo.id)
-        }
-      }
-    })
-
-    await logger.info('Cleaned up orphaned training photos', { 
-      deleted: result.count,
-      photos: orphanedPhotos.map(p => p.url)
-    })
-  }
+  // For now, skip orphaned file cleanup since we don't have trainingPhoto model
+  // TODO: Implement file cleanup when file storage is set up
+  await logger.info('Skipped orphaned file cleanup - not implemented yet')
 }
 
 async function updateUserStatistics(): Promise<void> {
@@ -155,19 +131,17 @@ async function updateUserStatistics(): Promise<void> {
     const [modelCount, generationCount, creditUsage] = await Promise.all([
       prisma.aIModel.count({ where: { userId: user.id } }),
       prisma.generation.count({ where: { userId: user.id } }),
-      prisma.creditTransaction.aggregate({
-        where: { userId: user.id, type: 'DEBIT' },
-        _sum: { amount: true }
+      prisma.usageLog.aggregate({
+        where: { userId: user.id },
+        _sum: { creditsUsed: true }
       })
     ])
 
-    // Update user record with latest stats
+    // Update user's creditsUsed field
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        totalModels: modelCount,
-        totalGenerations: generationCount,
-        totalCreditsUsed: creditUsage._sum.amount || 0
+        creditsUsed: creditUsage._sum.creditsUsed || 0
       }
     })
   }
