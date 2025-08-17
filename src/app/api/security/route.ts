@@ -128,11 +128,16 @@ export async function POST(request: NextRequest) {
 
       case 'unban-user':
         const { prisma: prisma2 } = await import('@/lib/db')
-        await prisma2.user.update({
-          where: { id: userId },
+        // TODO: Add status and banReason fields to User model if user banning is needed
+        // For now, log the unban action
+        await prisma2.usageLog.create({
           data: {
-            status: 'ACTIVE',
-            banReason: null
+            userId: userId,
+            action: 'user_unbanned',
+            details: {
+              timestamp: new Date().toISOString()
+            },
+            creditsUsed: 0
           }
         })
 
