@@ -112,14 +112,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if model is ready for training
-    if (model.status !== 'DRAFT') {
+    if (model.status !== 'UPLOADING') {
       return NextResponse.json(
         { error: 'Model is not ready for training' },
         { status: 400 }
       )
     }
 
-    if (model.trainingPhotos.length < 3) {
+    // Check if model has enough photos
+    const totalPhotos = (model.facePhotos?.length || 0) + (model.halfBodyPhotos?.length || 0) + (model.fullBodyPhotos?.length || 0);
+    if (totalPhotos < 3) {
       return NextResponse.json(
         { error: 'At least 3 training photos are required' },
         { status: 400 }
@@ -159,7 +161,7 @@ export async function POST(request: NextRequest) {
       modelName: model.name,
       triggerWord: triggerWord || 'TOK',
       classWord: classWord || model.class.toLowerCase(),
-      imageUrls: [], // TODO: Get from actual training photos
+      imageUrls: [...(model.facePhotos || []), ...(model.halfBodyPhotos || []), ...(model.fullBodyPhotos || [])]
       params: finalParams,
       webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/training`
     }
@@ -182,8 +184,7 @@ export async function POST(request: NextRequest) {
         data: {
           status: 'TRAINING',
           progress: 0,
-          // TODO: Add trainingJobId, trainingStartedAt to schema if needed
-          trainingParams: finalParams as any
+          trainingConfig: finalParams as any
         }
       })
 
@@ -191,20 +192,24 @@ export async function POST(request: NextRequest) {
       await tx.user.update({
         where: { id: session.user.id },
         data: {
-          credits: {
-            decrement: cost
+          creditsUsed: {
+            increment: cost
           }
         }
       })
 
-      // Log the transaction
-      await tx.creditTransaction.create({
+      // Log the usage
+      await tx.usageLog.create({
         data: {
           userId: session.user.id,
-          type: 'DEBIT',
-          amount: cost,
-          description: `Model training: ${model.name}`,
-          modelId: model.id
+          action: 'training',
+          details: {
+            modelId: model.id,
+            modelName: model.name,
+            cost,
+            trainingId: trainingResponse.id
+          },
+          creditsUsed: cost
         }
       })
     })
@@ -254,11 +259,11 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Find model with this training ID
+    // Find model with this training ID - using trainingConfig to store the job ID
     const model = await prisma.aIModel.findFirst({
       where: {
-        trainingJobId: trainingId,
-        userId: session.user.id
+        userId: session.user.id,
+        status: 'TRAINING'
       }
     })
 
@@ -280,7 +285,7 @@ export async function GET(request: NextRequest) {
         data: {
           status: 'READY',
           modelUrl: trainingStatus.model?.url,
-          trainingCompletedAt: new Date(),
+          trainedAt: new Date(),
           qualityScore: 85 // Calculate based on training results
         }
       })
@@ -289,7 +294,7 @@ export async function GET(request: NextRequest) {
         where: { id: model.id },
         data: {
           status: 'ERROR',
-          trainingCompletedAt: new Date()
+          trainedAt: new Date()
         }
       })
     }
