@@ -32,7 +32,8 @@ export default async function DashboardPage() {
         name: true,
         email: true,
         plan: true,
-        credits: true,
+        creditsUsed: true,
+        creditsLimit: true,
         createdAt: true
       }
     }),
@@ -137,7 +138,7 @@ export default async function DashboardPage() {
             <div className="flex items-center space-x-3">
               <Badge variant="secondary" className="flex items-center">
                 <Coins className="w-4 h-4 mr-1" />
-                {user?.credits || 0} credits
+                {(user?.creditsLimit || 0) - (user?.creditsUsed || 0)} credits
               </Badge>
               <Badge variant="outline">
                 {user?.plan} Plan
