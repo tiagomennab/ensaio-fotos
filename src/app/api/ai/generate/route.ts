@@ -170,11 +170,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Sanitize prompt and add trigger word
-    const sanitizedPrompt = sanitizePrompt(prompt)
-    const finalPrompt = model.triggerWord ? 
-      `${sanitizedPrompt}, ${model.triggerWord}` : 
-      sanitizedPrompt
+    // Sanitize prompt
+    const finalPrompt = sanitizePrompt(prompt)
 
     // Get AI provider
     const aiProvider = getAIProvider()

@@ -93,7 +93,6 @@ export async function POST(request: NextRequest) {
         userId: session.user.id
       },
       include: {
-        trainingPhotos: true,
         user: {
           select: {
             id: true,
@@ -158,9 +157,9 @@ export async function POST(request: NextRequest) {
     const trainingRequest = {
       modelId: model.id,
       modelName: model.name,
-      triggerWord: triggerWord || model.triggerWord || 'TOK',
+      triggerWord: triggerWord || 'TOK',
       classWord: classWord || model.class.toLowerCase(),
-      imageUrls: model.trainingPhotos.map(photo => photo.url),
+      imageUrls: [], // TODO: Get from actual training photos
       params: finalParams,
       webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/training`
     }
@@ -182,11 +181,8 @@ export async function POST(request: NextRequest) {
         where: { id: model.id },
         data: {
           status: 'TRAINING',
-          triggerWord: trainingRequest.triggerWord,
-          trainingJobId: trainingResponse.id,
-          trainingStartedAt: new Date(),
-          estimatedCompletionTime: trainingResponse.estimatedTime ? 
-            new Date(Date.now() + trainingResponse.estimatedTime * 60 * 1000) : null,
+          progress: 0,
+          // TODO: Add trainingJobId, trainingStartedAt to schema if needed
           trainingParams: finalParams as any
         }
       })
