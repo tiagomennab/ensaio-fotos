@@ -169,38 +169,13 @@ async function collectAIMetrics(startTime: Date) {
 }
 
 async function collectSecurityMetrics(startTime: Date) {
-  const [
-    totalViolations,
-    rateLimitViolations,
-    bannedUsers,
-    blockedRequests
-  ] = await Promise.all([
-    prisma.contentModeration.count({
-      where: {
-        isViolation: true,
-        createdAt: { gte: startTime }
-      }
-    }),
-    prisma.rateLimitLog.count({
-      where: {
-        createdAt: { gte: startTime },
-        metadata: {
-          path: ['violation'],
-          equals: true
-        }
-      }
-    }),
-    prisma.user.count({
-      where: { status: 'BANNED' }
-    }),
-    getBlockedRequestsCount(startTime)
-  ])
-
+  // TODO: Implement security metrics when proper models are added
+  // For now, return placeholder values
   return {
-    content_violations: totalViolations,
-    rate_limit_violations: rateLimitViolations,
-    banned_users: bannedUsers,
-    blocked_requests: blockedRequests
+    content_violations: 0,
+    rate_limit_violations: 0,
+    banned_users: 0,
+    blocked_requests: 0
   }
 }
 
