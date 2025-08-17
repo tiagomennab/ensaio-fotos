@@ -148,11 +148,17 @@ export async function POST(request: NextRequest) {
 
       case 'restrict-user':
         const { prisma: prisma3 } = await import('@/lib/db')
-        await prisma3.user.update({
-          where: { id: userId },
+        // TODO: Add status and banReason fields to User model if user restrictions are needed
+        // For now, log the restriction action
+        await prisma3.usageLog.create({
           data: {
-            status: 'RESTRICTED',
-            banReason: reason || 'Account under review'
+            userId: userId,
+            action: 'user_restricted',
+            details: {
+              reason: reason || 'Account under review',
+              timestamp: new Date().toISOString()
+            },
+            creditsUsed: 0
           }
         })
 
