@@ -23,6 +23,10 @@ export default async function DashboardPage() {
   const session = await requireAuth()
   const userId = session.user.id
 
+  if (!userId) {
+    redirect('/auth/signin')
+  }
+
   // Fetch user data and statistics
   const [user, models, recentGenerations, recentActivity] = await Promise.all([
     prisma.user.findUnique({

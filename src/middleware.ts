@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
-import { RateLimiter } from '@/lib/security/rate-limiter'
-import { ContentModerator } from '@/lib/security/content-moderator'
 
-// Security middleware for rate limiting and content moderation
+// Simple middleware for basic auth checks
+// Rate limiting moved to API routes to avoid Edge Runtime issues with Prisma
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
@@ -18,118 +17,30 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-    // Get user session
+    // Get user session for protected routes
     const token = await getToken({ 
       req: request, 
       secret: process.env.NEXTAUTH_SECRET 
     })
 
-    // Rate limiting for authenticated users
-    if (token?.sub) {
-      const userId = token.sub
-      const userPlan = (token.plan as 'FREE' | 'PREMIUM' | 'GOLD') || 'FREE'
+    // Protect dashboard and other authenticated routes
+    const protectedPaths = ['/dashboard', '/models', '/generate', '/billing', '/gallery']
+    const isProtectedPath = protectedPaths.some(path => pathname.startsWith(path))
 
-      // Check if user is blocked
-      const blockStatus = await RateLimiter.isUserBlocked(userId)
-      if (blockStatus.isBlocked) {
-        return new NextResponse(
-          JSON.stringify({
-            error: 'User blocked',
-            reason: blockStatus.reason,
-            unblockTime: blockStatus.unblockTime
-          }),
-          {
-            status: 429,
-            headers: {
-              'Content-Type': 'application/json',
-              'Retry-After': blockStatus.unblockTime 
-                ? Math.ceil((blockStatus.unblockTime.getTime() - Date.now()) / 1000).toString()
-                : '3600'
-            }
-          }
-        )
-      }
-
-      // Rate limit API calls
-      if (pathname.startsWith('/api/')) {
-        const limit = await RateLimiter.checkLimit(userId, 'api', userPlan)
-        
-        if (!limit.allowed) {
-          // Record violation
-          await RateLimiter.recordAttempt(userId, 'api', {
-            violation: true,
-            ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-            userAgent: request.headers.get('user-agent'),
-            path: pathname
-          })
-
-          return new NextResponse(
-            JSON.stringify({
-              error: 'Rate limit exceeded',
-              limit: limit.limit,
-              resetTime: limit.resetTime,
-              retryAfter: limit.retryAfter
-            }),
-            {
-              status: 429,
-              headers: {
-                'Content-Type': 'application/json',
-                'X-RateLimit-Limit': limit.limit.toString(),
-                'X-RateLimit-Remaining': limit.remaining.toString(),
-                'X-RateLimit-Reset': limit.resetTime.toISOString(),
-                'Retry-After': limit.retryAfter?.toString() || '3600'
-              }
-            }
-          )
-        }
-
-        // Record successful attempt
-        await RateLimiter.recordAttempt(userId, 'api', {
-          ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-          userAgent: request.headers.get('user-agent'),
-          path: pathname
-        })
-
-        // Add rate limit headers to response
-        const response = NextResponse.next()
-        response.headers.set('X-RateLimit-Limit', limit.limit.toString())
-        response.headers.set('X-RateLimit-Remaining', limit.remaining.toString())
-        response.headers.set('X-RateLimit-Reset', limit.resetTime.toISOString())
-        
-        return response
-      }
+    if (isProtectedPath && !token) {
+      // Redirect to sign in for protected routes
+      const signInUrl = new URL('/auth/signin', request.url)
+      signInUrl.searchParams.set('callbackUrl', request.url)
+      return NextResponse.redirect(signInUrl)
     }
 
-    // Rate limiting for unauthenticated users (stricter limits)
-    if (!token && pathname.startsWith('/api/')) {
-      const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
-      const limit = await RateLimiter.checkLimit(ip, 'api', 'FREE')
-      
-      if (!limit.allowed) {
-        return new NextResponse(
-          JSON.stringify({
-            error: 'Rate limit exceeded',
-            message: 'Please sign in for higher rate limits'
-          }),
-          {
-            status: 429,
-            headers: {
-              'Content-Type': 'application/json',
-              'Retry-After': limit.retryAfter?.toString() || '900'
-            }
-          }
-        )
-      }
-
-      await RateLimiter.recordAttempt(ip, 'api', {
-        unauthenticated: true,
-        ip: ip,
-        userAgent: request.headers.get('user-agent'),
-        path: pathname
-      })
-    }
-
-    return NextResponse.next()
+    // Add basic security headers
+    const response = NextResponse.next()
+    response.headers.set('X-Frame-Options', 'DENY')
+    response.headers.set('X-Content-Type-Options', 'nosniff')
+    response.headers.set('Referrer-Policy', 'origin-when-cross-origin')
+    
+    return response
   } catch (error) {
     console.error('Middleware error:', error)
     return NextResponse.next()
