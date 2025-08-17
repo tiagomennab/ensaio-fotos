@@ -100,7 +100,7 @@ async function collectUserMetrics(startTime: Date) {
     prisma.user.count(),
     prisma.user.count({
       where: {
-        lastLoginAt: { gte: startTime }
+        updatedAt: { gte: startTime }
       }
     }),
     prisma.user.count({
