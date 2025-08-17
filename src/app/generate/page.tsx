@@ -15,7 +15,12 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
   const userId = session.user.id
 
   // Get user's ready models
-  const models = await getReadyModelsByUserId(userId)
+  const rawModels = await getReadyModelsByUserId(userId)
+  const models = rawModels.map(model => ({
+    ...model,
+    class: model.class as string,
+    qualityScore: model.qualityScore ?? undefined
+  }))
 
   // Check if user has any ready models
   if (models.length === 0) {

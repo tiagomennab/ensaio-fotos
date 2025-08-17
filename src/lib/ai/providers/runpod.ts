@@ -170,7 +170,6 @@ export class RunPodProvider extends AIProvider {
         status: this.mapRunPodStatus(response.status),
         urls: response.output?.images,
         error: response.error,
-        logs: response.output?.logs,
         createdAt: response.createdAt || new Date().toISOString(),
         completedAt: response.output?.completed_at,
         metadata: response.output?.metadata

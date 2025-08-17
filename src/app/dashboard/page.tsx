@@ -333,7 +333,7 @@ export default async function DashboardPage() {
                           }`} />
                           <div>
                             <div className="text-sm font-medium text-gray-900">
-                              {activity.details?.description || activity.action}
+                              {(activity.details as any)?.description || activity.action}
                             </div>
                             <div className="text-xs text-gray-500">
                               {new Date(activity.createdAt).toLocaleString()}

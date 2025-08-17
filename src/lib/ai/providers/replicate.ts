@@ -41,7 +41,7 @@ export class ReplicateProvider extends AIProvider {
       const webhookUrl = request.webhookUrl || 
         `${AI_CONFIG.webhooks.baseUrl}${AI_CONFIG.webhooks.endpoints.training}`
 
-      const training = await this.client.trainings.create({
+      const training = await (this.client.trainings as any).create({
         version: AI_CONFIG.replicate.models.flux.training,
         input,
         webhook: webhookUrl,
@@ -75,7 +75,7 @@ export class ReplicateProvider extends AIProvider {
           name: `model_${trainingId.slice(-8)}`
         } : undefined,
         logs: training.logs ? training.logs.split('\n') : undefined,
-        error: training.error,
+        error: training.error as string | undefined,
         createdAt: training.created_at,
         completedAt: training.completed_at || undefined
       }
@@ -160,13 +160,12 @@ export class ReplicateProvider extends AIProvider {
         status: this.mapReplicateStatus(prediction.status),
         urls: Array.isArray(prediction.output) ? prediction.output : 
                prediction.output ? [prediction.output] : undefined,
-        error: prediction.error,
-        logs: prediction.logs ? prediction.logs.split('\n') : undefined,
+        error: prediction.error as string | undefined,
         createdAt: prediction.created_at,
         completedAt: prediction.completed_at || undefined,
         metadata: prediction.input ? {
-          prompt: prediction.input.prompt,
-          seed: prediction.input.seed || 0,
+          prompt: (prediction.input as any).prompt,
+          seed: (prediction.input as any).seed || 0,
           params: prediction.input as any
         } : undefined
       }

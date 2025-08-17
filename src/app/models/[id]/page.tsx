@@ -213,7 +213,7 @@ export default async function ModelPage({ params }: ModelPageProps) {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {model.sampleImages.map((image: string, index: number) => (
+                    {(model.sampleImages as string[]).map((image: string, index: number) => (
                       <div key={index} className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
                         <img
                           src={image}
