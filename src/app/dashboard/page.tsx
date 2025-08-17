@@ -1,5 +1,6 @@
 import { requireAuth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { redirect } from 'next/navigation'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
