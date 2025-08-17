@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
       modelName: model.name,
       triggerWord: triggerWord || 'TOK',
       classWord: classWord || model.class.toLowerCase(),
-      imageUrls: [...(model.facePhotos || []), ...(model.halfBodyPhotos || []), ...(model.fullBodyPhotos || [])]
+      imageUrls: [...(model.facePhotos || []), ...(model.halfBodyPhotos || []), ...(model.fullBodyPhotos || [])],
       params: finalParams,
       webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/training`
     }
