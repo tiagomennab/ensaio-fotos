@@ -71,15 +71,15 @@ export default async function DashboardPage() {
         }
       }
     }),
-    prisma.creditTransaction.findMany({
+    prisma.usageLog.findMany({
       where: { userId },
       take: 5,
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
-        type: true,
-        amount: true,
-        description: true,
+        action: true,
+        creditsUsed: true,
+        details: true,
         createdAt: true
       }
     })
@@ -92,9 +92,9 @@ export default async function DashboardPage() {
     completedGenerations: await prisma.generation.count({ 
       where: { userId, status: 'COMPLETED' } 
     }),
-    totalCreditsUsed: await prisma.creditTransaction.aggregate({
-      where: { userId, type: 'DEBIT' },
-      _sum: { amount: true }
+    totalCreditsUsed: await prisma.usageLog.aggregate({
+      where: { userId },
+      _sum: { creditsUsed: true }
     })
   }
 
@@ -200,7 +200,7 @@ export default async function DashboardPage() {
               <Zap className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalCreditsUsed._sum.amount || 0}</div>
+              <div className="text-2xl font-bold">{stats.totalCreditsUsed._sum.creditsUsed || 0}</div>
               <p className="text-xs text-muted-foreground">
                 Total credits spent
               </p>
@@ -329,11 +329,11 @@ export default async function DashboardPage() {
                       <div key={activity.id} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="flex items-center space-x-3">
                           <div className={`w-2 h-2 rounded-full ${
-                            activity.type === 'CREDIT' ? 'bg-green-500' : 'bg-red-500'
+                            activity.creditsUsed < 0 ? 'bg-green-500' : 'bg-red-500'
                           }`} />
                           <div>
                             <div className="text-sm font-medium text-gray-900">
-                              {activity.description}
+                              {activity.details?.description || activity.action}
                             </div>
                             <div className="text-xs text-gray-500">
                               {new Date(activity.createdAt).toLocaleString()}
@@ -341,9 +341,9 @@ export default async function DashboardPage() {
                           </div>
                         </div>
                         <div className={`font-medium ${
-                          activity.type === 'CREDIT' ? 'text-green-600' : 'text-red-600'
+                          activity.creditsUsed < 0 ? 'text-green-600' : 'text-red-600'
                         }`}>
-                          {activity.type === 'CREDIT' ? '+' : '-'}{activity.amount}
+                          {activity.creditsUsed < 0 ? '+' : ''}{Math.abs(activity.creditsUsed)}
                         </div>
                       </div>
                     ))}

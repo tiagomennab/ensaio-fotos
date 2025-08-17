@@ -162,10 +162,10 @@ export class ContentModerator {
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-    const violations = await prisma.contentModeration.count({
+    const violations = await prisma.usageLog.count({
       where: {
         userId,
-        isViolation: true,
+        action: 'content_violation',
         createdAt: {
           gte: thirtyDaysAgo
         }
@@ -205,17 +205,23 @@ export class ContentModerator {
 
   private static async logModerationResult(analysis: ContentAnalysis): Promise<void> {
     try {
-      await prisma.contentModeration.create({
-        data: {
-          userId: analysis.userId,
-          content: analysis.prompt,
-          isViolation: !analysis.result.isAllowed,
-          severity: analysis.result.severity,
-          categories: analysis.result.categories,
-          confidence: analysis.result.confidence,
-          reason: analysis.result.reason
-        }
-      })
+      // Only log violations to reduce noise
+      if (!analysis.result.isAllowed) {
+        await prisma.usageLog.create({
+          data: {
+            userId: analysis.userId,
+            action: 'content_violation',
+            details: {
+              content: analysis.prompt,
+              severity: analysis.result.severity,
+              categories: analysis.result.categories,
+              confidence: analysis.result.confidence,
+              reason: analysis.result.reason
+            },
+            creditsUsed: 0
+          }
+        })
+      }
     } catch (error) {
       console.error('Failed to log moderation result:', error)
     }
@@ -230,23 +236,22 @@ export class ContentModerator {
     const where = userId ? { userId } : {}
     
     const [total, recent, violations] = await Promise.all([
-      prisma.contentModeration.count({
-        where: { ...where, isViolation: true }
+      prisma.usageLog.count({
+        where: { ...where, action: 'content_violation' }
       }),
-      prisma.contentModeration.count({
+      prisma.usageLog.count({
         where: {
           ...where,
-          isViolation: true,
+          action: 'content_violation',
           createdAt: {
             gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // Last 7 days
           }
         }
       }),
-      prisma.contentModeration.findMany({
-        where: { ...where, isViolation: true },
+      prisma.usageLog.findMany({
+        where: { ...where, action: 'content_violation' },
         select: {
-          categories: true,
-          severity: true
+          details: true
         }
       })
     ])
@@ -255,10 +260,15 @@ export class ContentModerator {
     const bySeverity: Record<string, number> = {}
 
     violations.forEach(violation => {
-      violation.categories.forEach(category => {
-        byCategory[category] = (byCategory[category] || 0) + 1
-      })
-      bySeverity[violation.severity] = (bySeverity[violation.severity] || 0) + 1
+      const details = violation.details as any
+      if (details?.categories) {
+        details.categories.forEach((category: string) => {
+          byCategory[category] = (byCategory[category] || 0) + 1
+        })
+      }
+      if (details?.severity) {
+        bySeverity[details.severity] = (bySeverity[details.severity] || 0) + 1
+      }
     })
 
     return {

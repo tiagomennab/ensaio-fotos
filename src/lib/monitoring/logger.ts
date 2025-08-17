@@ -94,17 +94,24 @@ class Logger {
 
   private async databaseLog(entry: LogEntry) {
     try {
-      await prisma.systemLog.create({
-        data: {
-          level: entry.level,
-          message: entry.message,
-          userId: entry.userId,
-          requestId: entry.requestId,
-          metadata: entry.metadata || {},
-          stack: entry.stack,
-          createdAt: entry.timestamp
-        }
-      })
+      // TODO: Implement proper logging when systemLog model is added to schema
+      // For now, using usageLog as fallback for error tracking
+      if (entry.level === 'error' || entry.level === 'fatal') {
+        await prisma.usageLog.create({
+          data: {
+            userId: entry.userId || 'system',
+            action: 'system_error',
+            details: {
+              level: entry.level,
+              message: entry.message,
+              requestId: entry.requestId,
+              metadata: entry.metadata,
+              stack: entry.stack
+            },
+            creditsUsed: 0
+          }
+        })
+      }
     } catch (error) {
       // Fallback to console if database logging fails
       console.error('Failed to log to database:', error)
@@ -264,9 +271,13 @@ class Logger {
 
   private async getAPICallsPerMinute(): Promise<number> {
     try {
+      // Since rateLimitLog doesn't exist, estimate based on generation/training actions
       const oneMinuteAgo = new Date(Date.now() - 60 * 1000)
-      const count = await prisma.rateLimitLog.count({
+      const count = await prisma.usageLog.count({
         where: {
+          action: {
+            in: ['generation', 'training']
+          },
           createdAt: {
             gte: oneMinuteAgo
           }
@@ -281,11 +292,9 @@ class Logger {
   private async getRecentErrorLogs(): Promise<number> {
     try {
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
-      const count = await prisma.systemLog.count({
+      const count = await prisma.usageLog.count({
         where: {
-          level: {
-            in: [LogLevel.ERROR, LogLevel.FATAL]
-          },
+          action: 'system_error',
           createdAt: {
             gte: oneHourAgo
           }
@@ -299,8 +308,10 @@ class Logger {
 
   private async calculateErrorRate(errorCount: number): Promise<number> {
     try {
+      // Since we don't have a comprehensive log system anymore,
+      // we'll estimate based on error logs vs total system actions
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
-      const totalLogs = await prisma.systemLog.count({
+      const totalSystemActions = await prisma.usageLog.count({
         where: {
           createdAt: {
             gte: oneHourAgo
@@ -308,7 +319,7 @@ class Logger {
         }
       })
       
-      return totalLogs > 0 ? Math.round((errorCount / totalLogs) * 100) : 0
+      return totalSystemActions > 0 ? Math.round((errorCount / totalSystemActions) * 100) : 0
     } catch (error) {
       return 0
     }
@@ -319,15 +330,17 @@ class Logger {
     try {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
       
-      await prisma.systemLog.deleteMany({
+      // Clean up old system error logs from usageLog
+      await prisma.usageLog.deleteMany({
         where: {
+          action: 'system_error',
           createdAt: {
             lt: thirtyDaysAgo
           }
         }
       })
 
-      await this.info('Cleaned up old system logs', { cutoff: thirtyDaysAgo })
+      await this.info('Cleaned up old system error logs', { cutoff: thirtyDaysAgo })
     } catch (error) {
       await this.error('Failed to cleanup old logs', error as Error)
     }

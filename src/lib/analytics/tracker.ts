@@ -55,8 +55,7 @@ export class AnalyticsTracker {
       user,
       models,
       generations,
-      creditTransactions,
-      subscriptions
+      usageLogs
     ] = await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
@@ -92,25 +91,18 @@ export class AnalyticsTracker {
           }
         }
       }),
-      prisma.creditTransaction.findMany({
+      prisma.usageLog.findMany({
         where: {
-          userId,
-          type: 'DEBIT'
+          userId
         },
         select: {
-          amount: true
-        }
-      }),
-      prisma.subscription.count({
-        where: {
-          userId,
-          status: 'ACTIVE'
+          creditsUsed: true
         }
       })
     ])
 
-    const totalCreditsUsed = creditTransactions.reduce(
-      (sum, tx) => sum + tx.amount, 0
+    const totalCreditsUsed = usageLogs.reduce(
+      (sum, log) => sum + log.creditsUsed, 0
     )
 
     const completedGenerations = generations.filter(g => g.status === 'COMPLETED')
@@ -148,7 +140,7 @@ export class AnalyticsTracker {
       favoriteStyle,
       joinDate: user?.createdAt || new Date(),
       lastActivity: user?.updatedAt || new Date(),
-      planUpgrades: subscriptions
+      planUpgrades: 0 // TODO: Implement plan upgrades tracking when subscription model is added
     }
   }
 
@@ -163,7 +155,6 @@ export class AnalyticsTracker {
       userStats,
       modelStats,
       generationStats,
-      subscriptionStats
     ] = await Promise.all([
       prisma.user.aggregate({
         _count: true,
@@ -200,18 +191,8 @@ export class AnalyticsTracker {
           }
         }
       }),
-      prisma.subscription.findMany({
-        where: {
-          createdAt: {
-            gte: start,
-            lte: end
-          }
-        },
-        select: {
-          plan: true,
-          amount: true
-        }
-      })
+      // TODO: Implement subscription tracking when subscription model is added
+      Promise.resolve([])
     ])
 
     // Calculate active users (users who generated images in the last 7 days)
@@ -253,15 +234,13 @@ export class AnalyticsTracker {
       .slice(0, 10)
       .map(([name, usage]) => ({ name, usage }))
 
-    // Revenue metrics
-    const totalRevenue = subscriptionStats.reduce((sum, sub) => sum + sub.amount, 0)
-    const mrr = subscriptionStats
-      .filter(sub => sub.plan !== 'FREE')
-      .reduce((sum, sub) => sum + sub.amount, 0)
-
-    const conversionRate = totalUsers > 0
-      ? (subscriptionStats.filter(sub => sub.plan !== 'FREE').length / totalUsers) * 100
-      : 0
+    // Revenue metrics - placeholder until subscription model is implemented
+    const totalRevenue = 0
+    const mrr = 0
+    
+    // Calculate conversion rate based on plan upgrades (non-FREE users)
+    const paidUsers = await prisma.user.count({ where: { plan: { not: 'FREE' } } })
+    const conversionRate = totalUsers > 0 ? (paidUsers / totalUsers) * 100 : 0
 
     return {
       totalUsers,

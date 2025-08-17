@@ -69,10 +69,10 @@ export class RateLimiter {
     const windowStart = new Date(now.getTime() - config.windowMs)
 
     // Buscar tentativas recentes
-    const recentAttempts = await prisma.rateLimitLog.findMany({
+    const recentAttempts = await prisma.usageLog.findMany({
       where: {
         userId,
-        action,
+        action: `rate_limit_${action}`,
         createdAt: {
           gte: windowStart
         }
@@ -111,11 +111,12 @@ export class RateLimiter {
     metadata?: Record<string, any>
   ): Promise<void> {
     try {
-      await prisma.rateLimitLog.create({
+      await prisma.usageLog.create({
         data: {
           userId,
-          action,
-          metadata: metadata || {}
+          action: `rate_limit_${action}`,
+          details: metadata || {},
+          creditsUsed: 0
         }
       })
     } catch (error) {
@@ -128,8 +129,11 @@ export class RateLimiter {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     
     try {
-      await prisma.rateLimitLog.deleteMany({
+      await prisma.usageLog.deleteMany({
         where: {
+          action: {
+            startsWith: 'rate_limit_'
+          },
           createdAt: {
             lt: sevenDaysAgo
           }
@@ -175,13 +179,16 @@ export class RateLimiter {
     unblockTime?: Date
   }> {
     // Verificar se o usuário está temporariamente bloqueado
-    const recentViolations = await prisma.rateLimitLog.count({
+    const recentViolations = await prisma.usageLog.count({
       where: {
         userId,
+        action: {
+          startsWith: 'rate_limit_'
+        },
         createdAt: {
           gte: new Date(Date.now() - 60 * 60 * 1000) // Last hour
         },
-        metadata: {
+        details: {
           path: ['violation'],
           equals: true
         }
@@ -230,24 +237,27 @@ export class RateLimiter {
       userStats,
       actionStats
     ] = await Promise.all([
-      prisma.rateLimitLog.count({
+      prisma.usageLog.count({
         where: {
+          action: { startsWith: 'rate_limit_' },
           createdAt: { gte: oneDayAgo }
         }
       }),
-      prisma.rateLimitLog.count({
+      prisma.usageLog.count({
         where: {
+          action: { startsWith: 'rate_limit_' },
           createdAt: { gte: oneDayAgo },
-          metadata: {
+          details: {
             path: ['violation'],
             equals: true
           }
         }
       }),
-      prisma.rateLimitLog.groupBy({
+      prisma.usageLog.groupBy({
         by: ['userId'],
         _count: { userId: true },
         where: {
+          action: { startsWith: 'rate_limit_' },
           createdAt: { gte: oneDayAgo }
         },
         orderBy: {
@@ -255,10 +265,11 @@ export class RateLimiter {
         },
         take: 10
       }),
-      prisma.rateLimitLog.groupBy({
+      prisma.usageLog.groupBy({
         by: ['action'],
         _count: { action: true },
         where: {
+          action: { startsWith: 'rate_limit_' },
           createdAt: { gte: oneDayAgo }
         },
         orderBy: {
