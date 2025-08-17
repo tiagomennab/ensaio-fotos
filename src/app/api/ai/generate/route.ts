@@ -188,7 +188,7 @@ export async function POST(request: NextRequest) {
         resolution: `${finalParams.width}x${finalParams.height}`,
         style: style || 'default',
         variations,
-        parameters: finalParams as any
+        seed: finalParams.seed
       }
     })
 
