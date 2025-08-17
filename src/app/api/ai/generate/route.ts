@@ -229,20 +229,24 @@ export async function POST(request: NextRequest) {
       await tx.user.update({
         where: { id: session.user.id },
         data: {
-          credits: {
-            decrement: cost
+          creditsUsed: {
+            increment: cost
           }
         }
       })
 
-      // Log the transaction
-      await tx.creditTransaction.create({
+      // Log the usage
+      await tx.usageLog.create({
         data: {
           userId: session.user.id,
-          type: 'DEBIT',
-          amount: cost,
-          description: `Image generation: ${variations} image${variations > 1 ? 's' : ''}`,
-          generationId: generation.id
+          action: 'generation',
+          details: {
+            generationId: generation.id,
+            modelId: model.id,
+            variations,
+            cost
+          },
+          creditsUsed: cost
         }
       })
     })
@@ -305,8 +309,7 @@ export async function GET(request: NextRequest) {
         model: {
           select: {
             id: true,
-            name: true,
-            triggerWord: true
+            name: true
           }
         }
       }

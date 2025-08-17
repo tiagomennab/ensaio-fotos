@@ -167,9 +167,11 @@ model Generation {
   
   // Results
   status         GenerationStatus @default(PENDING)
+  jobId          String?         // External job ID from AI provider
   imageUrls      Json[]          // Array of generated image URLs
   thumbnailUrls  Json[]          // Array of thumbnail URLs
   errorMessage   String?
+  estimatedCompletionTime DateTime?
   
   // Metadata
   processingTime Int?            // Time in milliseconds
