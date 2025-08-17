@@ -3,7 +3,7 @@ import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import GoogleProvider from 'next-auth/providers/google'
 import GitHubProvider from 'next-auth/providers/github'
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/lib/db'
 import { verifyPassword } from '@/lib/db/users'
 import { Plan } from '@prisma/client'
 
@@ -38,8 +38,8 @@ const handler = NextAuth({
         return {
           id: user.id,
           email: user.email,
-          name: user.name,
-          image: user.avatar,
+          name: user.name || undefined,
+          image: user.avatar || undefined,
           plan: user.plan,
           creditsUsed: user.creditsUsed,
           creditsLimit: user.creditsLimit
