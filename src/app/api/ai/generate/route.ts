@@ -120,7 +120,8 @@ export async function POST(request: NextRequest) {
           select: {
             id: true,
             plan: true,
-            credits: true
+            creditsUsed: true,
+            creditsLimit: true
           }
         }
       }

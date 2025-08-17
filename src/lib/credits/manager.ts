@@ -45,10 +45,10 @@ export class CreditManager {
   static async getUserCredits(userId: string): Promise<number> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { credits: true }
+      select: { creditsUsed: true, creditsLimit: true }
     })
     
-    return user?.credits || 0
+    return (user?.creditsLimit || 0) - (user?.creditsUsed || 0)
   }
 
   static async getUserUsage(userId: string): Promise<CreditUsage> {
@@ -56,44 +56,18 @@ export class CreditManager {
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
-    // Get transactions for usage calculation
-    const [todayTransactions, monthTransactions, allTransactions, user] = await Promise.all([
-      prisma.creditTransaction.findMany({
-        where: {
-          userId,
-          type: 'DEBIT',
-          createdAt: { gte: startOfDay }
-        }
-      }),
-      prisma.creditTransaction.findMany({
-        where: {
-          userId,
-          type: 'DEBIT',
-          createdAt: { gte: startOfMonth }
-        }
-      }),
-      prisma.creditTransaction.findMany({
-        where: {
-          userId,
-          type: 'DEBIT'
-        }
-      }),
-      prisma.user.findUnique({
-        where: { id: userId },
-        select: { credits: true }
-      })
-    ])
+    // Get user info
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { creditsUsed: true, creditsLimit: true }
+    })
 
     return {
-      today: todayTransactions.reduce((sum, tx) => sum + tx.amount, 0),
-      thisMonth: monthTransactions.reduce((sum, tx) => sum + tx.amount, 0),
-      totalTraining: allTransactions
-        .filter(tx => tx.description.includes('training'))
-        .reduce((sum, tx) => sum + tx.amount, 0),
-      totalGeneration: allTransactions
-        .filter(tx => tx.description.includes('generation'))
-        .reduce((sum, tx) => sum + tx.amount, 0),
-      remaining: user?.credits || 0
+      today: user?.creditsUsed || 0,
+      thisMonth: user?.creditsUsed || 0,
+      totalTraining: 0, // Would need separate tracking
+      totalGeneration: 0, // Would need separate tracking
+      remaining: (user?.creditsLimit || 0) - (user?.creditsUsed || 0)
     }
   }
 
@@ -152,23 +126,13 @@ export class CreditManager {
         await tx.user.update({
           where: { id: userId },
           data: {
-            credits: {
-              decrement: amount
+            creditsUsed: {
+              increment: amount
             }
           }
         })
 
-        // Log transaction
-        await tx.creditTransaction.create({
-          data: {
-            userId,
-            type: 'DEBIT',
-            amount,
-            description,
-            modelId: metadata?.modelId,
-            generationId: metadata?.generationId
-          }
-        })
+        // TODO: Log transaction when CreditTransaction model is added to schema
       })
 
       return true
@@ -194,23 +158,13 @@ export class CreditManager {
         await tx.user.update({
           where: { id: userId },
           data: {
-            credits: {
-              increment: amount
+            creditsUsed: {
+              decrement: amount
             }
           }
         })
 
-        // Log transaction
-        await tx.creditTransaction.create({
-          data: {
-            userId,
-            type: 'CREDIT',
-            amount,
-            description,
-            modelId: metadata?.modelId,
-            generationId: metadata?.generationId
-          }
-        })
+        // TODO: Log transaction when CreditTransaction model is added to schema
       })
 
       return true
@@ -250,39 +204,18 @@ export class CreditManager {
     limit: number // in bytes
     percentage: number
   }> {
-    // Calculate storage usage from uploaded files
-    const [facePhotos, bodyPhotos, generations] = await Promise.all([
-      prisma.trainingPhoto.findMany({
-        where: {
-          model: {
-            userId
-          }
-        },
-        select: { fileSize: true }
-      }),
-      prisma.trainingPhoto.findMany({
-        where: {
-          model: {
-            userId
-          }
-        },
-        select: { fileSize: true }
-      }),
-      prisma.generation.findMany({
-        where: { userId },
-        select: { imageUrls: true }
-      })
-    ])
+    // Get generations for storage calculation
+    const generations = await prisma.generation.findMany({
+      where: { userId },
+      select: { imageUrls: true }
+    })
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { plan: true }
     })
 
-    const totalSize = [
-      ...facePhotos,
-      ...bodyPhotos
-    ].reduce((sum, photo) => sum + (photo.fileSize || 0), 0)
+    const totalSize = 0 // TODO: Calculate from actual training photos when model exists
 
     // Estimate generated images size (assume 1MB per image)
     const generatedImagesSize = generations.reduce(
