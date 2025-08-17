@@ -61,6 +61,13 @@ const handler = NextAuth({
         token.plan = user.plan
         token.creditsUsed = user.creditsUsed
         token.creditsLimit = user.creditsLimit
+        
+        // Update lastLoginAt when user signs in
+        // NOTE: After applying migration_fix_inconsistencies.sql, run: npx prisma generate
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lastLoginAt: new Date() } as any
+        })
       }
       
       // For OAuth providers, create user with FREE plan if first time

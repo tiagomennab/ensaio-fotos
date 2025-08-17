@@ -137,12 +137,16 @@ async function updateUserStatistics(): Promise<void> {
       })
     ])
 
-    // Update user's creditsUsed field
+    // Update user's statistics fields
+    // NOTE: After applying migration_fix_inconsistencies.sql, run: npx prisma generate
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        creditsUsed: creditUsage._sum.creditsUsed || 0
-      }
+        creditsUsed: creditUsage._sum.creditsUsed || 0,
+        ...(modelCount !== undefined && { totalModels: modelCount }),
+        ...(generationCount !== undefined && { totalGenerations: generationCount }),
+        ...(creditUsage._sum.creditsUsed !== undefined && { totalCreditsUsed: creditUsage._sum.creditsUsed })
+      } as any
     })
   }
 

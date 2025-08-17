@@ -94,24 +94,17 @@ class Logger {
 
   private async databaseLog(entry: LogEntry) {
     try {
-      // TODO: Implement proper logging when systemLog model is added to schema
-      // For now, using usageLog as fallback for error tracking
-      if (entry.level === 'error' || entry.level === 'fatal') {
-        await prisma.usageLog.create({
-          data: {
-            userId: entry.userId || 'system',
-            action: 'system_error',
-            details: {
-              level: entry.level,
-              message: entry.message,
-              requestId: entry.requestId,
-              metadata: entry.metadata,
-              stack: entry.stack
-            },
-            creditsUsed: 0
-          }
-        })
-      }
+      // Log to SystemLog model
+      await prisma.systemLog.create({
+        data: {
+          level: entry.level,
+          message: entry.message,
+          userId: entry.userId || null,
+          requestId: entry.requestId || null,
+          metadata: entry.metadata || null,
+          stack: entry.stack || null
+        }
+      })
     } catch (error) {
       // Fallback to console if database logging fails
       console.error('Failed to log to database:', error)

@@ -16,6 +16,10 @@ export interface User {
   plan: Plan
   creditsUsed: number
   creditsLimit: number
+  totalModels: number
+  totalGenerations: number
+  totalCreditsUsed: number
+  lastLoginAt?: Date
   createdAt: Date
   updatedAt: Date
 }
@@ -84,6 +88,17 @@ export interface Collection {
   createdAt: Date
   updatedAt: Date
   userId: string
+}
+
+export interface SystemLog {
+  id: string
+  level: string
+  message: string
+  userId?: string
+  requestId?: string
+  metadata?: any
+  stack?: string
+  createdAt: Date
 }
 
 export interface UploadedPhoto {

@@ -145,7 +145,7 @@ export class AnalyticsTracker {
       favoriteStyle,
       joinDate: user?.createdAt || new Date(),
       lastActivity: user?.updatedAt || new Date(),
-      planUpgrades: 0 // TODO: Implement plan upgrades tracking when subscription model is added
+      planUpgrades: (user as any)?.plan !== 'FREE' ? 1 : 0 // Basic tracking: if user has paid plan
     }
   }
 
@@ -196,8 +196,18 @@ export class AnalyticsTracker {
           }
         }
       }),
-      // TODO: Implement subscription tracking when subscription model is added
-      Promise.resolve([])
+      // Get users with active subscriptions
+      prisma.user.findMany({
+        where: {
+          subscriptionStatus: { in: ['active', 'trialing'] },
+          createdAt: { gte: startDate }
+        },
+        select: {
+          plan: true,
+          subscriptionStatus: true,
+          createdAt: true
+        }
+      })
     ])
 
     // Calculate active users (users who generated images in the last 7 days)

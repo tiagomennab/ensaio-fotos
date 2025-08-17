@@ -85,17 +85,15 @@ export default async function DashboardPage() {
     })
   ])
 
-  // Calculate quick stats
+  // Get quick stats from user record (updated by cron job) and calculate completed generations
+  // NOTE: After applying migration_fix_inconsistencies.sql, run: npx prisma generate
   const stats = {
-    totalModels: await prisma.aIModel.count({ where: { userId } }),
-    totalGenerations: await prisma.generation.count({ where: { userId } }),
+    totalModels: (user as any)?.totalModels || 0,
+    totalGenerations: (user as any)?.totalGenerations || 0,
     completedGenerations: await prisma.generation.count({ 
       where: { userId, status: 'COMPLETED' } 
     }),
-    totalCreditsUsed: await prisma.usageLog.aggregate({
-      where: { userId },
-      _sum: { creditsUsed: true }
-    })
+    totalCreditsUsed: (user as any)?.totalCreditsUsed || 0
   }
 
   const getStatusColor = (status: string) => {
@@ -200,7 +198,7 @@ export default async function DashboardPage() {
               <Zap className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalCreditsUsed._sum.creditsUsed || 0}</div>
+              <div className="text-2xl font-bold">{stats.totalCreditsUsed || 0}</div>
               <p className="text-xs text-muted-foreground">
                 Total credits spent
               </p>

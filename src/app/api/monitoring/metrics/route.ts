@@ -190,7 +190,12 @@ async function collectPerformanceMetrics(startTime: Date) {
   ])
 
   return {
-    error_count: 0, // Placeholder until systemLog model is implemented
+    error_count: await prisma.systemLog.count({
+      where: {
+        level: { in: ['error', 'fatal'] },
+        createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } // Last 24 hours
+      }
+    }),
     average_response_time_ms: avgResponseTime,
     slow_requests: slowRequests
   }
