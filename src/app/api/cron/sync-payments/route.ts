@@ -19,7 +19,10 @@ export async function GET(request: NextRequest) {
 
     await logger.info('Starting payment sync job')
 
-    const asaas = new AsaasClient()
+    const asaas = new AsaasClient({
+      apiKey: process.env.ASAAS_API_KEY!,
+      environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
+    })
     let syncResults = {
       payments_synced: 0,
       subscriptions_synced: 0,
