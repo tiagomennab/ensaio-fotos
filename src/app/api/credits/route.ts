@@ -44,23 +44,21 @@ export async function GET(request: NextRequest) {
         const limit = parseInt(searchParams.get('limit') || '50')
         const offset = parseInt(searchParams.get('offset') || '0')
 
-        const transactions = await prisma.creditTransaction.findMany({
+        const transactions = await prisma.usageLog.findMany({
           where: { userId: session.user.id },
           orderBy: { createdAt: 'desc' },
           take: limit,
           skip: offset,
           select: {
             id: true,
-            type: true,
-            amount: true,
-            description: true,
-            createdAt: true,
-            modelId: true,
-            generationId: true
+            action: true,
+            creditsUsed: true,
+            details: true,
+            createdAt: true
           }
         })
 
-        const total = await prisma.creditTransaction.count({
+        const total = await prisma.usageLog.count({
           where: { userId: session.user.id }
         })
 
