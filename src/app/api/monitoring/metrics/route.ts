@@ -180,23 +180,17 @@ async function collectSecurityMetrics(startTime: Date) {
 }
 
 async function collectPerformanceMetrics(startTime: Date) {
+  // TODO: Implement performance metrics when proper logging models are added
   const [
-    errorLogs,
     avgResponseTime,
     slowRequests
   ] = await Promise.all([
-    prisma.systemLog.count({
-      where: {
-        level: { in: ['error', 'fatal'] },
-        createdAt: { gte: startTime }
-      }
-    }),
     getAverageResponseTime(startTime),
     getSlowRequestsCount(startTime)
   ])
 
   return {
-    error_count: errorLogs,
+    error_count: 0, // Placeholder until systemLog model is implemented
     average_response_time_ms: avgResponseTime,
     slow_requests: slowRequests
   }
