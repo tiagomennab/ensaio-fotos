@@ -130,14 +130,14 @@ export async function POST(request: NextRequest) {
 
 async function refundGenerationCredits(generationId: string, userId: string) {
   try {
-    // Find the original debit transaction
-    const debitTransaction = await prisma.creditTransaction.findFirst({
+    // Find the original usage log for this generation
+    const originalUsage = await prisma.usageLog.findFirst({
       where: {
         userId,
-        generationId,
-        type: 'DEBIT',
-        description: {
-          contains: 'Image generation'
+        action: 'generation',
+        details: {
+          path: ['generationId'],
+          equals: generationId
         }
       },
       orderBy: {
@@ -145,31 +145,34 @@ async function refundGenerationCredits(generationId: string, userId: string) {
       }
     })
 
-    if (debitTransaction) {
+    if (originalUsage && originalUsage.creditsUsed > 0) {
       // Create refund transaction
       await prisma.$transaction(async (tx) => {
-        await tx.creditTransaction.create({
+        await tx.usageLog.create({
           data: {
             userId,
-            type: 'CREDIT',
-            amount: debitTransaction.amount,
-            description: `Generation refund: Failed/Cancelled`,
-            generationId
+            action: 'generation_refund',
+            details: {
+              generationId,
+              originalCreditsUsed: originalUsage.creditsUsed,
+              reason: 'Generation failed/cancelled'
+            },
+            creditsUsed: -originalUsage.creditsUsed // Negative to indicate refund
           }
         })
 
-        // Add credits back to user
+        // Reduce credits used from user (effectively adding credits back)
         await tx.user.update({
           where: { id: userId },
           data: {
-            credits: {
-              increment: debitTransaction.amount
+            creditsUsed: {
+              decrement: originalUsage.creditsUsed
             }
           }
         })
       })
 
-      console.log(`Refunded ${debitTransaction.amount} credits to user ${userId}`)
+      console.log(`Refunded ${originalUsage.creditsUsed} credits to user ${userId}`)
     }
   } catch (error) {
     console.error('Failed to refund generation credits:', error)
