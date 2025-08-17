@@ -139,12 +139,13 @@ export async function POST(request: NextRequest) {
     const cost = calculateTrainingCost(finalParams.steps, finalParams.resolution)
 
     // Check user credits
-    if (model.user.credits < cost) {
+    const availableCredits = model.user.creditsLimit - model.user.creditsUsed
+    if (availableCredits < cost) {
       return NextResponse.json(
         { 
           error: 'Insufficient credits',
           required: cost,
-          available: model.user.credits
+          available: availableCredits
         },
         { status: 402 }
       )
