@@ -6,10 +6,14 @@ export async function POST(request: NextRequest) {
   try {
     const payload: WebhookPayload = await request.json()
     
-    // Find the model with this training job ID
+    // Find the model that is currently training
+    // Since trainingJobId is not in the schema, we'll find by status and recent activity
     const model = await prisma.aIModel.findFirst({
       where: {
-        trainingJobId: payload.id
+        status: 'TRAINING',
+        updatedAt: {
+          gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Within last 24 hours
+        }
       },
       include: {
         user: {
@@ -66,7 +70,7 @@ export async function POST(request: NextRequest) {
 
       case 'canceled':
         updateData.status = 'DRAFT'
-        updateData.trainingJobId = null
+        // trainingJobId field doesn't exist in schema, skipping this update
         
         // Refund credits on cancellation
         await refundTrainingCredits(model.id, model.userId)
@@ -103,14 +107,14 @@ export async function POST(request: NextRequest) {
 
 async function refundTrainingCredits(modelId: string, userId: string) {
   try {
-    // Find the original debit transaction
-    const debitTransaction = await prisma.creditTransaction.findFirst({
+    // Find the original usage log for this training
+    const originalUsage = await prisma.usageLog.findFirst({
       where: {
         userId,
-        modelId,
-        type: 'DEBIT',
-        description: {
-          contains: 'Model training'
+        action: 'training',
+        details: {
+          path: ['modelId'],
+          equals: modelId
         }
       },
       orderBy: {
@@ -118,31 +122,34 @@ async function refundTrainingCredits(modelId: string, userId: string) {
       }
     })
 
-    if (debitTransaction) {
+    if (originalUsage && originalUsage.creditsUsed > 0) {
       // Create refund transaction
       await prisma.$transaction(async (tx) => {
-        await tx.creditTransaction.create({
+        await tx.usageLog.create({
           data: {
             userId,
-            type: 'CREDIT',
-            amount: debitTransaction.amount,
-            description: `Training refund: Failed/Cancelled`,
-            modelId
+            action: 'training_refund',
+            details: {
+              modelId,
+              originalCreditsUsed: originalUsage.creditsUsed,
+              reason: 'Training failed/cancelled'
+            },
+            creditsUsed: -originalUsage.creditsUsed // Negative to indicate refund
           }
         })
 
-        // Add credits back to user
+        // Reduce credits used from user (effectively adding credits back)
         await tx.user.update({
           where: { id: userId },
           data: {
-            credits: {
-              increment: debitTransaction.amount
+            creditsUsed: {
+              decrement: originalUsage.creditsUsed
             }
           }
         })
       })
 
-      console.log(`Refunded ${debitTransaction.amount} credits to user ${userId}`)
+      console.log(`Refunded ${originalUsage.creditsUsed} credits to user ${userId}`)
     }
   } catch (error) {
     console.error('Failed to refund training credits:', error)
