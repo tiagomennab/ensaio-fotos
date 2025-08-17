@@ -194,7 +194,7 @@ export async function POST(request: NextRequest) {
 
     // Prepare generation request
     const generationRequest = {
-      modelUrl: model.modelUrl,
+      modelUrl: model.modelUrl || undefined,
       prompt: finalPrompt,
       negativePrompt: negativePrompt,
       params: finalParams,
