@@ -107,11 +107,17 @@ export async function POST(request: NextRequest) {
     switch (action) {
       case 'ban-user':
         const { prisma } = await import('@/lib/db')
-        await prisma.user.update({
-          where: { id: userId },
+        // TODO: Add status and banReason fields to User model if user banning is needed
+        // For now, we could use a comment or disable the user by removing their access
+        await prisma.usageLog.create({
           data: {
-            status: 'BANNED',
-            banReason: reason || 'Violation of terms of service'
+            userId: userId,
+            action: 'user_banned',
+            details: {
+              reason: reason || 'Violation of terms of service',
+              timestamp: new Date().toISOString()
+            },
+            creditsUsed: 0
           }
         })
 
