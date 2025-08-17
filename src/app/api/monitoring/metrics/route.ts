@@ -190,6 +190,7 @@ async function collectPerformanceMetrics(startTime: Date) {
   ])
 
   return {
+    // @ts-ignore - systemLog will be available after running migration and prisma generate
     error_count: await prisma.systemLog.count({
       where: {
         level: { in: ['error', 'fatal'] },

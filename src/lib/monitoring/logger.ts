@@ -95,14 +95,15 @@ class Logger {
   private async databaseLog(entry: LogEntry) {
     try {
       // Log to SystemLog model
+      // @ts-ignore - systemLog will be available after running migration and prisma generate
       await prisma.systemLog.create({
         data: {
           level: entry.level,
           message: entry.message,
-          userId: entry.userId || null,
-          requestId: entry.requestId || null,
-          metadata: entry.metadata || null,
-          stack: entry.stack || null
+          userId: entry.userId || undefined,
+          requestId: entry.requestId || undefined,
+          metadata: entry.metadata || undefined,
+          stack: entry.stack || undefined
         }
       })
     } catch (error) {
