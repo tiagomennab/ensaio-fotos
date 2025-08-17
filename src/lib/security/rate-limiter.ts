@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db'
-import { UserPlan } from '@prisma/client'
+import { Plan } from '@prisma/client'
 
 export interface RateLimit {
   allowed: boolean
@@ -16,7 +16,7 @@ export interface RateLimitConfig {
   skipFailedRequests?: boolean
 }
 
-export const RATE_LIMITS: Record<string, Record<UserPlan, RateLimitConfig>> = {
+export const RATE_LIMITS: Record<string, Record<Plan, RateLimitConfig>> = {
   // API calls gerais
   api: {
     FREE: { requests: 100, windowMs: 15 * 60 * 1000 }, // 100 requests per 15 minutes
@@ -57,7 +57,7 @@ export class RateLimiter {
   static async checkLimit(
     userId: string,
     action: string,
-    userPlan: UserPlan = 'FREE'
+    userPlan: Plan = 'FREE'
   ): Promise<RateLimit> {
     const config = RATE_LIMITS[action]?.[userPlan]
     
@@ -204,19 +204,24 @@ export class RateLimiter {
       }
     }
 
-    // Verificar status do usuário no banco
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        status: true,
-        banReason: true
+    // Since status and banReason don't exist, check for excessive violations
+    const totalViolations = await prisma.usageLog.count({
+      where: {
+        userId,
+        action: {
+          startsWith: 'rate_limit_'
+        },
+        details: {
+          path: ['violation'],
+          equals: true
+        }
       }
     })
 
-    if (user?.status === 'BANNED') {
+    if (totalViolations >= 50) {
       return {
         isBlocked: true,
-        reason: user.banReason || 'User account is banned'
+        reason: 'Account suspended due to excessive rate limit violations'
       }
     }
 

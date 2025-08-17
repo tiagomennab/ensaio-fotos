@@ -58,7 +58,7 @@ export async function middleware(request: NextRequest) {
           // Record violation
           await RateLimiter.recordAttempt(userId, 'api', {
             violation: true,
-            ip: request.ip,
+            ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
             userAgent: request.headers.get('user-agent'),
             path: pathname
           })
@@ -85,7 +85,7 @@ export async function middleware(request: NextRequest) {
 
         // Record successful attempt
         await RateLimiter.recordAttempt(userId, 'api', {
-          ip: request.ip,
+          ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
           userAgent: request.headers.get('user-agent'),
           path: pathname
         })
@@ -102,7 +102,7 @@ export async function middleware(request: NextRequest) {
 
     // Rate limiting for unauthenticated users (stricter limits)
     if (!token && pathname.startsWith('/api/')) {
-      const ip = request.ip || 'unknown'
+      const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
       const limit = await RateLimiter.checkLimit(ip, 'api', 'FREE')
       
       if (!limit.allowed) {
@@ -123,7 +123,7 @@ export async function middleware(request: NextRequest) {
 
       await RateLimiter.recordAttempt(ip, 'api', {
         unauthenticated: true,
-        ip: request.ip,
+        ip: ip,
         userAgent: request.headers.get('user-agent'),
         path: pathname
       })

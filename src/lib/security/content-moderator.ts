@@ -285,21 +285,18 @@ export class ContentModerator {
     violationCount: number
     banReason?: string
   }> {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        status: true,
-        banReason: true
-      }
-    })
-
+    // Since status and banReason fields don't exist, check violation history
     const violationCount = await this.getUserViolationHistory(userId)
+    
+    // Consider user banned if they have too many violations
+    const isBanned = violationCount >= 10
+    const isRestricted = violationCount >= 5
 
     return {
-      isBanned: user?.status === 'BANNED',
-      isRestricted: user?.status === 'RESTRICTED',
+      isBanned,
+      isRestricted,
       violationCount,
-      banReason: user?.banReason || undefined
+      banReason: isBanned ? 'Too many content violations' : undefined
     }
   }
 }

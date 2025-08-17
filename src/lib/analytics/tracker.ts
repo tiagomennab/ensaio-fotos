@@ -37,12 +37,17 @@ export interface SystemAnalytics {
 export class AnalyticsTracker {
   static async trackEvent(event: AnalyticsEvent): Promise<void> {
     try {
-      await prisma.analyticsEvent.create({
+      // Using usageLog as fallback for analytics tracking
+      await prisma.usageLog.create({
         data: {
           userId: event.userId,
-          event: event.event,
-          properties: event.properties || {},
-          timestamp: event.timestamp || new Date()
+          action: `analytics_${event.event}`,
+          details: {
+            event: event.event,
+            properties: event.properties || {},
+            timestamp: event.timestamp || new Date()
+          },
+          creditsUsed: 0
         }
       })
     } catch (error) {
@@ -308,17 +313,21 @@ export class AnalyticsTracker {
     totalSessions: number
     averageSessionTime: number
   }> {
-    const events = await prisma.analyticsEvent.findMany({
-      where: { userId },
-      orderBy: { timestamp: 'desc' },
+    const events = await prisma.usageLog.findMany({
+      where: { 
+        userId,
+        action: { startsWith: 'analytics_' }
+      },
+      orderBy: { createdAt: 'desc' },
       select: {
-        event: true,
-        timestamp: true
+        action: true,
+        createdAt: true,
+        details: true
       }
     })
 
     const uniqueDays = new Set(
-      events.map(e => e.timestamp.toDateString())
+      events.map(e => e.createdAt.toDateString())
     ).size
 
     // Calculate streak (consecutive days with activity)
@@ -328,7 +337,7 @@ export class AnalyticsTracker {
     for (let i = 0; i < 30; i++) {
       const checkDate = new Date(today.getTime() - i * 24 * 60 * 60 * 1000)
       const hasActivity = events.some(e => 
-        e.timestamp.toDateString() === checkDate.toDateString()
+        e.createdAt.toDateString() === checkDate.toDateString()
       )
       
       if (hasActivity) {
@@ -341,7 +350,7 @@ export class AnalyticsTracker {
     return {
       daysActive: uniqueDays,
       streakDays,
-      totalSessions: events.filter(e => e.event === 'session_start').length,
+      totalSessions: events.filter(e => e.action === 'analytics_session_start').length,
       averageSessionTime: 0 // Would need session tracking to calculate this
     }
   }

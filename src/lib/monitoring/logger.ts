@@ -255,11 +255,16 @@ class Logger {
 
   private async getActiveUsers(): Promise<number> {
     try {
+      // Since lastLoginAt doesn't exist, estimate based on recent activity
       const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000)
       const count = await prisma.user.count({
         where: {
-          lastLoginAt: {
-            gte: fifteenMinutesAgo
+          generations: {
+            some: {
+              createdAt: {
+                gte: fifteenMinutesAgo
+              }
+            }
           }
         }
       })

@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db'
-import { UserPlan } from '@prisma/client'
+import { Plan } from '@prisma/client'
 
 export interface CreditLimits {
   daily: number
@@ -17,7 +17,7 @@ export interface CreditUsage {
   remaining: number
 }
 
-export const PLAN_LIMITS: Record<UserPlan, CreditLimits> = {
+export const PLAN_LIMITS: Record<Plan, CreditLimits> = {
   FREE: {
     daily: 10,
     monthly: 100,
@@ -74,7 +74,7 @@ export class CreditManager {
   static async canUserAfford(
     userId: string, 
     amount: number, 
-    userPlan: UserPlan
+    userPlan: Plan
   ): Promise<{ canAfford: boolean; reason?: string }> {
     const [currentCredits, usage] = await Promise.all([
       this.getUserCredits(userId),
@@ -174,7 +174,7 @@ export class CreditManager {
     }
   }
 
-  static async getMonthlyAllowance(userPlan: UserPlan): Promise<number> {
+  static async getMonthlyAllowance(userPlan: Plan): Promise<number> {
     return PLAN_LIMITS[userPlan].monthly
   }
 
