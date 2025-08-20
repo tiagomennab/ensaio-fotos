@@ -15,7 +15,14 @@ export default async function AdminSecurityPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation userPlan={session.user.plan} />
+      <Navigation 
+        userPlan={session.user.plan}
+        userName={session.user.name}
+        userEmail={session.user.email}
+        userImage={session.user.image}
+        creditsUsed={session.user.creditsUsed}
+        creditsLimit={session.user.creditsLimit}
+      />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
