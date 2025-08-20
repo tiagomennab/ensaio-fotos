@@ -123,7 +123,14 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation userPlan={user?.plan} />
+      <Navigation 
+        userPlan={user?.plan}
+        userName={user?.name || session.user.name}
+        userEmail={user?.email || session.user.email}
+        userImage={session.user.image}
+        creditsUsed={user?.creditsUsed || 0}
+        creditsLimit={user?.creditsLimit || 0}
+      />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
