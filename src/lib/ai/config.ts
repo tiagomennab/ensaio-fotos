@@ -10,13 +10,13 @@ export const AI_CONFIG = {
     models: {
       // FLUX.1 for training and generation
       flux: {
-        training: 'ostris/flux-dev-lora-trainer',
-        generation: 'black-forest-labs/flux-schnell'
+        training: 'ostris/flux-dev-lora-trainer:26dce37af90b9d997eeb970d92e47de3064d46c300504ae376c75bef6a9022d2',
+        generation: 'black-forest-labs/flux-schnell:c846a69991daf4c0e5d016514849d14ee5b2e6846ce6b9d6f21369e564cfe51e'
       },
       // Stable Diffusion models
       sdxl: {
-        training: 'ostris/sdxl-lora-trainer',
-        generation: 'stability-ai/sdxl'
+        training: 'cloneofsimo/lora:fce477182f407ffd66b94b08e761424cabd13b82b518754b83080bc75ad32466',
+        generation: 'stability-ai/sdxl:7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc'
       },
       // Real-ESRGAN for upscaling
       upscaler: 'nightmareai/real-esrgan'
