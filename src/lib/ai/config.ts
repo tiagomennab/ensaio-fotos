@@ -6,9 +6,15 @@ export const AI_CONFIG = {
   replicate: {
     apiToken: process.env.REPLICATE_API_TOKEN || '',
     webhookSecret: process.env.REPLICATE_WEBHOOK_SECRET || '',
+    // Model destination configuration
+    modelNaming: {
+      baseUsername: process.env.REPLICATE_USERNAME || 'vibephoto',
+      prefix: 'flux-lora',
+      separator: '-'
+    },
     // Popular models for training and generation
     models: {
-      // FLUX.1 for training and generation
+      // FLUX.1 for training and generation - Updated per Replicate API docs
       flux: {
         training: 'ostris/flux-dev-lora-trainer:26dce37af90b9d997eeb970d92e47de3064d46c300504ae376c75bef6a9022d2',
         generation: 'black-forest-labs/flux-schnell:c846a69991daf4c0e5d016514849d14ee5b2e6846ce6b9d6f21369e564cfe51e'
@@ -16,10 +22,13 @@ export const AI_CONFIG = {
       // Stable Diffusion models
       sdxl: {
         training: 'cloneofsimo/lora:fce477182f407ffd66b94b08e761424cabd13b82b518754b83080bc75ad32466',
-        generation: 'stability-ai/sdxl:7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc'
+        generation: 'stability-ai/sdxl:7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc',
+        turbo: 'stability-ai/sdxl-turbo:da77bc59ee60423279fd632efb4795ab731d9e3ca9705ef3341091fb989b7eaf' // Faster generation
       },
       // Real-ESRGAN for upscaling
-      upscaler: 'nightmareai/real-esrgan'
+      upscaler: 'nightmareai/real-esrgan',
+      // Background removal
+      backgroundRemoval: 'rembg/new:fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003'
     }
   },
   

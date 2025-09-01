@@ -8,6 +8,10 @@ class AsaasAPI {
   private baseURL: string
 
   constructor(config: AsaasConfig) {
+    if (!config.apiKey) {
+      throw new Error('ASAAS_API_KEY is required')
+    }
+    
     this.apiKey = config.apiKey
     this.baseURL = config.environment === 'production' 
       ? 'https://www.asaas.com/api/v3'
@@ -27,11 +31,41 @@ class AsaasAPI {
     })
 
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(`Asaas API Error: ${error.message || response.statusText}`)
+      let errorMessage = response.statusText
+      
+      try {
+        // Tenta parsear a resposta como JSON
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json()
+          errorMessage = errorData.message || errorData.error || errorMessage
+        } else {
+          // Se não for JSON, lê como texto
+          const textError = await response.text()
+          if (textError) {
+            errorMessage = textError
+          }
+        }
+      } catch (parseError) {
+        // Se falhar ao parsear, mantém o statusText
+        console.error('Failed to parse error response:', parseError)
+      }
+
+      throw new Error(`Asaas API Error (${response.status}): ${errorMessage}`)
     }
 
-    return response.json()
+    // Verifica se a resposta tem conteúdo antes de parsear como JSON
+    const text = await response.text()
+    if (!text) {
+      return {}
+    }
+
+    try {
+      return JSON.parse(text)
+    } catch (error) {
+      console.error('Failed to parse response as JSON:', text)
+      throw new Error('Invalid JSON response from Asaas API')
+    }
   }
 
   // Customer management
@@ -69,7 +103,7 @@ class AsaasAPI {
   // Subscription management
   async createSubscription(subscriptionData: {
     customer: string
-    billingType: 'BOLETO' | 'CREDIT_CARD' | 'PIX' | 'UNDEFINED'
+    billingType: 'CREDIT_CARD' | 'PIX' | 'UNDEFINED'
     value: number
     nextDueDate: string
     cycle: 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'SEMIANNUALLY' | 'YEARLY'
@@ -119,7 +153,7 @@ class AsaasAPI {
   // Payment management
   async createPayment(paymentData: {
     customer: string
-    billingType: 'BOLETO' | 'CREDIT_CARD' | 'PIX' | 'UNDEFINED'
+    billingType: 'CREDIT_CARD' | 'PIX' | 'UNDEFINED'
     dueDate: string
     value: number
     description?: string
@@ -198,7 +232,7 @@ class AsaasAPI {
 // Initialize Asaas client
 const asaas = new AsaasAPI({
   apiKey: process.env.ASAAS_API_KEY || '',
-  environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
+  environment: process.env.ASAAS_ENVIRONMENT === 'production' ? 'production' : 'sandbox'
 })
 
 export { asaas, AsaasAPI }
@@ -206,8 +240,21 @@ export { AsaasAPI as AsaasClient }
 
 // Helper functions for our SaaS
 export const PLAN_PRICES = {
-  PREMIUM: 19.90,
-  GOLD: 49.90
+  STARTER: {
+    monthly: 89.00,
+    annual: 708.00,
+    monthlyEquivalent: 59.00 // Para plano anual (708/12)
+  },
+  PREMIUM: {
+    monthly: 269.00,
+    annual: 2148.00,
+    monthlyEquivalent: 179.00 // Para plano anual (2148/12)
+  },
+  GOLD: {
+    monthly: 449.00,
+    annual: 3588.00,
+    monthlyEquivalent: 299.00 // Para plano anual (3588/12)
+  }
 } as const
 
 export const PLAN_CYCLES = {
@@ -215,9 +262,41 @@ export const PLAN_CYCLES = {
   YEARLY: 'YEARLY'
 } as const
 
-export function getPlanPrice(plan: 'PREMIUM' | 'GOLD', cycle: 'MONTHLY' | 'YEARLY' = 'MONTHLY') {
-  const basePrice = PLAN_PRICES[plan]
-  return cycle === 'YEARLY' ? basePrice * 10 : basePrice // 2 months free on yearly
+export const PLAN_FEATURES = {
+  STARTER: {
+    models: 1, // por mês
+    credits: 50, // por mês
+    resolution: 'Resolução padrão'
+  },
+  PREMIUM: {
+    models: 3, // por mês
+    credits: 200, // por mês
+    resolution: 'Alta resolução'
+  },
+  GOLD: {
+    models: 10, // por mês
+    credits: 1000, // por mês
+    resolution: 'Máxima resolução'
+  }
+} as const
+
+export function getPlanPrice(plan: 'STARTER' | 'PREMIUM' | 'GOLD', cycle: 'MONTHLY' | 'YEARLY' = 'MONTHLY') {
+  return cycle === 'YEARLY' ? PLAN_PRICES[plan].annual : PLAN_PRICES[plan].monthly
+}
+
+// Função para calcular economia anual (4 meses grátis)
+export function calculateAnnualSavings(plan: 'STARTER' | 'PREMIUM' | 'GOLD') {
+  const monthlyPrice = PLAN_PRICES[plan].monthly
+  const annualPrice = PLAN_PRICES[plan].annual
+  const savings = (monthlyPrice * 12) - annualPrice
+  const monthsEquivalent = Math.round(savings / monthlyPrice)
+  
+  return {
+    savings,
+    monthsEquivalent,
+    percentage: Math.round((savings / (monthlyPrice * 12)) * 100),
+    formattedSavings: `R$ ${savings.toFixed(2)}`
+  }
 }
 
 export function formatBrazilianDate(date: Date): string {

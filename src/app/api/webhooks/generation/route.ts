@@ -1,10 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { WebhookPayload } from '@/lib/ai/base'
+import crypto from 'crypto'
 
 export async function POST(request: NextRequest) {
   try {
-    const payload: WebhookPayload = await request.json()
+    // Webhook security validation
+    let payload: WebhookPayload
+    const webhookSecret = process.env.REPLICATE_WEBHOOK_SECRET
+    
+    if (webhookSecret) {
+      const signature = request.headers.get('webhook-signature')
+      const body = await request.text()
+      
+      if (!signature || !verifyWebhookSignature(body, signature, webhookSecret)) {
+        console.log('Generation webhook: Invalid signature')
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+      }
+      
+      // Parse JSON after verification
+      payload = JSON.parse(body)
+    } else {
+      // No secret configured, parse normally but log warning
+      console.warn('Generation webhook: No REPLICATE_WEBHOOK_SECRET configured - webhook not secured')
+      payload = await request.json()
+    }
     
     // Find the generation with this job ID
     const generation = await prisma.generation.findFirst({
@@ -206,4 +226,24 @@ async function sendGenerationNotification(email: string, modelName: string, imag
   //     <p><a href="${process.env.NEXTAUTH_URL}/gallery">View your photos</a></p>
   //   `
   // })
+}
+
+function verifyWebhookSignature(body: string, signature: string, secret: string): boolean {
+  try {
+    // Replicate uses HMAC-SHA256 for webhook signatures
+    const computedSignature = crypto
+      .createHmac('sha256', secret)
+      .update(body, 'utf8')
+      .digest('hex')
+    
+    // Compare signatures (use timing-safe comparison)
+    const expectedSignature = `sha256=${computedSignature}`
+    return crypto.timingSafeEqual(
+      Buffer.from(signature),
+      Buffer.from(expectedSignature)
+    )
+  } catch (error) {
+    console.error('Error verifying webhook signature:', error)
+    return false
+  }
 }

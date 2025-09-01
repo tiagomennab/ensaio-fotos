@@ -79,7 +79,7 @@ export default async function ModelPage({ params }: ModelPageProps) {
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/models">
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Models
+                  Voltar aos Modelos
                 </Link>
               </Button>
               <div>
@@ -91,7 +91,7 @@ export default async function ModelPage({ params }: ModelPageProps) {
                   </Badge>
                 </div>
                 <p className="text-gray-600 mt-1 capitalize">
-                  {model.class.toLowerCase().replace('_', ' ')} • Created {formatDate(model.createdAt)}
+                  {model.class.toLowerCase().replace('_', ' ')} • Criado em {formatDate(model.createdAt)}
                 </p>
               </div>
             </div>
@@ -101,14 +101,14 @@ export default async function ModelPage({ params }: ModelPageProps) {
                 <Button asChild>
                   <Link href={`/generate?model=${model.id}`}>
                     <Play className="w-4 h-4 mr-2" />
-                    Generate Photos
+                    Gerar Fotos
                   </Link>
                 </Button>
               )}
               <Button variant="outline" asChild>
                 <Link href={`/gallery?model=${model.id}`}>
                   <Eye className="w-4 h-4 mr-2" />
-                  View Gallery
+                  Ver Galeria
                 </Link>
               </Button>
             </div>
@@ -124,16 +124,16 @@ export default async function ModelPage({ params }: ModelPageProps) {
             {['TRAINING', 'PROCESSING', 'UPLOADING'].includes(model.status) && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Training Progress</CardTitle>
+                  <CardTitle>Progresso do Treinamento</CardTitle>
                   <CardDescription>
-                    Your model is currently being trained
+                    Seu modelo está sendo treinado atualmente
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     <div>
                       <div className="flex justify-between text-sm text-gray-600 mb-2">
-                        <span>Progress</span>
+                        <span>Progresso</span>
                         <span>{model.progress}%</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-3">
@@ -146,13 +146,13 @@ export default async function ModelPage({ params }: ModelPageProps) {
                     
                     {model.estimatedTime && (
                       <p className="text-sm text-gray-600">
-                        Estimated time remaining: ~{model.estimatedTime} minutes
+                        Tempo estimado restante: ~{model.estimatedTime} minutos
                       </p>
                     )}
                     
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                       <p className="text-blue-800 text-sm">
-                        <strong>What's happening:</strong> Your photos are being processed and the AI model is learning your unique features. You'll receive an email when training is complete.
+                        <strong>O que está acontecendo:</strong> Suas fotos estão sendo processadas e o modelo de IA está aprendendo suas características únicas. Você receberá um email quando o treinamento estiver completo.
                       </p>
                     </div>
                   </div>
@@ -164,23 +164,23 @@ export default async function ModelPage({ params }: ModelPageProps) {
             {model.status === 'ERROR' && (
               <Card className="border-red-200">
                 <CardHeader>
-                  <CardTitle className="text-red-800">Training Error</CardTitle>
+                  <CardTitle className="text-red-800">Erro no Treinamento</CardTitle>
                   <CardDescription>
-                    There was an issue training your model
+                    Houve um problema ao treinar seu modelo
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
                     <p className="text-red-800 text-sm">
-                      {model.errorMessage || 'An unknown error occurred during training.'}
+                      {model.errorMessage || 'Um erro desconhecido ocorreu durante o treinamento.'}
                     </p>
                   </div>
                   <div className="flex space-x-3">
                     <Button variant="outline">
-                      Retry Training
+                      Tentar Novamente
                     </Button>
                     <Button variant="outline">
-                      Contact Support
+                      Contatar Suporte
                     </Button>
                   </div>
                 </CardContent>
@@ -191,9 +191,9 @@ export default async function ModelPage({ params }: ModelPageProps) {
             {model.status === 'READY' && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Model Statistics</CardTitle>
+                  <CardTitle>Estatísticas do Modelo</CardTitle>
                   <CardDescription>
-                    Performance and usage metrics for this model
+                    Métricas de desempenho e uso para este modelo
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -206,9 +206,9 @@ export default async function ModelPage({ params }: ModelPageProps) {
             {model.sampleImages && model.sampleImages.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Sample Results</CardTitle>
+                  <CardTitle>Resultados de Exemplo</CardTitle>
                   <CardDescription>
-                    Examples of photos generated with this model
+                    Exemplos de fotos geradas com este modelo
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -217,7 +217,7 @@ export default async function ModelPage({ params }: ModelPageProps) {
                       <div key={index} className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
                         <img
                           src={image}
-                          alt={`Sample ${index + 1}`}
+                          alt={`Exemplo ${index + 1}`}
                           className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
                         />
                       </div>
@@ -231,9 +231,9 @@ export default async function ModelPage({ params }: ModelPageProps) {
             {recentGenerations.generations.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Recent Generations</CardTitle>
+                  <CardTitle>Gerações Recentes</CardTitle>
                   <CardDescription>
-                    Latest photos created with this model
+                    Últimas fotos criadas com este modelo
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -245,7 +245,7 @@ export default async function ModelPage({ params }: ModelPageProps) {
                             {generation.prompt}
                           </p>
                           <p className="text-sm text-gray-600">
-                            {formatDate(generation.createdAt)} • {generation.imageUrls.length} images
+                            {formatDate(generation.createdAt)} • {generation.imageUrls.length} imagens
                           </p>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -254,7 +254,7 @@ export default async function ModelPage({ params }: ModelPageProps) {
                           </Badge>
                           <Button size="sm" variant="outline" asChild>
                             <Link href={`/gallery?generation=${generation.id}`}>
-                              View
+                              Ver
                             </Link>
                           </Button>
                         </div>
@@ -264,7 +264,7 @@ export default async function ModelPage({ params }: ModelPageProps) {
                     {recentGenerations.generations.length > 5 && (
                       <Button variant="outline" asChild className="w-full">
                         <Link href={`/gallery?model=${model.id}`}>
-                          View All Generations
+                          Ver Todas as Gerações
                         </Link>
                       </Button>
                     )}
@@ -279,31 +279,31 @@ export default async function ModelPage({ params }: ModelPageProps) {
             {/* Model Information */}
             <Card>
               <CardHeader>
-                <CardTitle>Model Information</CardTitle>
+                <CardTitle>Informações do Modelo</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-gray-600">Class</p>
+                    <p className="text-gray-600">Classe</p>
                     <p className="font-semibold capitalize">{model.class.toLowerCase()}</p>
                   </div>
                   <div>
-                    <p className="text-gray-600">Total Photos</p>
+                    <p className="text-gray-600">Total de Fotos</p>
                     <p className="font-semibold">{model.totalPhotos}</p>
                   </div>
                   <div>
-                    <p className="text-gray-600">Created</p>
+                    <p className="text-gray-600">Criado</p>
                     <p className="font-semibold">{formatDate(model.createdAt)}</p>
                   </div>
                   {model.trainedAt && (
                     <div>
-                      <p className="text-gray-600">Trained</p>
+                      <p className="text-gray-600">Treinado</p>
                       <p className="font-semibold">{formatDate(model.trainedAt)}</p>
                     </div>
                   )}
                   {model.qualityScore && (
                     <div>
-                      <p className="text-gray-600">Quality Score</p>
+                      <p className="text-gray-600">Pontuação de Qualidade</p>
                       <p className="font-semibold">{Math.round(model.qualityScore * 100)}%</p>
                     </div>
                   )}
@@ -314,22 +314,22 @@ export default async function ModelPage({ params }: ModelPageProps) {
             {/* Training Data */}
             <Card>
               <CardHeader>
-                <CardTitle>Training Data</CardTitle>
+                <CardTitle>Dados de Treinamento</CardTitle>
                 <CardDescription>
-                  Photos used to train this model
+                  Fotos usadas para treinar este modelo
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Face Photos</span>
+                  <span className="text-sm text-gray-600">Fotos do Rosto</span>
                   <span className="font-semibold">{model.facePhotos?.length || 0}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Half Body Photos</span>
+                  <span className="text-sm text-gray-600">Fotos de Meio Corpo</span>
                   <span className="font-semibold">{model.halfBodyPhotos?.length || 0}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Full Body Photos</span>
+                  <span className="text-sm text-gray-600">Fotos de Corpo Inteiro</span>
                   <span className="font-semibold">{model.fullBodyPhotos?.length || 0}</span>
                 </div>
               </CardContent>
@@ -338,7 +338,7 @@ export default async function ModelPage({ params }: ModelPageProps) {
             {/* Actions */}
             <Card>
               <CardHeader>
-                <CardTitle>Actions</CardTitle>
+                <CardTitle>Ações</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {model.status === 'READY' && (
@@ -346,14 +346,14 @@ export default async function ModelPage({ params }: ModelPageProps) {
                     <Button asChild className="w-full">
                       <Link href={`/generate?model=${model.id}`}>
                         <Play className="w-4 h-4 mr-2" />
-                        Generate Photos
+                        Gerar Fotos
                       </Link>
                     </Button>
                     
                     <Button variant="outline" asChild className="w-full">
                       <Link href={`/gallery?model=${model.id}`}>
                         <Eye className="w-4 h-4 mr-2" />
-                        View Gallery
+                        Ver Galeria
                       </Link>
                     </Button>
                   </>
@@ -361,12 +361,12 @@ export default async function ModelPage({ params }: ModelPageProps) {
                 
                 <Button variant="outline" className="w-full">
                   <Download className="w-4 h-4 mr-2" />
-                  Export Model
+                  Exportar Modelo
                 </Button>
                 
                 <Button variant="destructive" className="w-full">
                   <Trash2 className="w-4 h-4 mr-2" />
-                  Delete Model
+                  Deletar Modelo
                 </Button>
               </CardContent>
             </Card>

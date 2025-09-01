@@ -14,22 +14,22 @@ interface FilterPanelProps {
 
 export function FilterPanel({ models, selectedModel, onModelSelect, onClose }: FilterPanelProps) {
   const statusOptions = [
-    { value: 'COMPLETED', label: 'Completed', icon: CheckCircle, color: 'text-green-600' },
-    { value: 'PROCESSING', label: 'Processing', icon: Clock, color: 'text-yellow-600' },
-    { value: 'FAILED', label: 'Failed', icon: AlertCircle, color: 'text-red-600' }
+    { value: 'COMPLETED', label: 'Concluída', icon: CheckCircle, color: 'text-green-600' },
+    { value: 'PROCESSING', label: 'Processando', icon: Clock, color: 'text-yellow-600' },
+    { value: 'FAILED', label: 'Falhada', icon: AlertCircle, color: 'text-red-600' }
   ]
 
   const timeRanges = [
-    { value: 'today', label: 'Today' },
-    { value: 'week', label: 'This Week' },
-    { value: 'month', label: 'This Month' },
-    { value: 'year', label: 'This Year' }
+    { value: 'today', label: 'Hoje' },
+    { value: 'week', label: 'Esta Semana' },
+    { value: 'month', label: 'Este Mês' },
+    { value: 'year', label: 'Este Ano' }
   ]
 
   const imageCountRanges = [
-    { value: '1', label: '1 Image' },
-    { value: '2-3', label: '2-3 Images' },
-    { value: '4+', label: '4+ Images' }
+    { value: '1', label: '1 Imagem' },
+    { value: '2-3', label: '2-3 Imagens' },
+    { value: '4+', label: '4+ Imagens' }
   ]
 
   const getClassIcon = (modelClass: string) => {
@@ -38,10 +38,10 @@ export function FilterPanel({ models, selectedModel, onModelSelect, onClose }: F
 
   const getClassLabel = (modelClass: string) => {
     const labels = {
-      MAN: 'Man',
-      WOMAN: 'Woman',
-      BOY: 'Boy',
-      GIRL: 'Girl',
+      MAN: 'Homem',
+      WOMAN: 'Mulher',
+      BOY: 'Menino',
+      GIRL: 'Menina',
       ANIMAL: 'Animal'
     }
     return labels[modelClass as keyof typeof labels] || modelClass
@@ -51,7 +51,7 @@ export function FilterPanel({ models, selectedModel, onModelSelect, onClose }: F
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Filters</CardTitle>
+          <CardTitle className="text-lg">Filtros</CardTitle>
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="w-4 h-4" />
           </Button>
@@ -62,7 +62,7 @@ export function FilterPanel({ models, selectedModel, onModelSelect, onClose }: F
         <div>
           <h3 className="font-medium text-gray-900 mb-3 flex items-center">
             <User className="w-4 h-4 mr-2" />
-            Filter by Model
+            Filtrar por Modelo
           </h3>
           <div className="space-y-2">
             <button
@@ -73,8 +73,8 @@ export function FilterPanel({ models, selectedModel, onModelSelect, onClose }: F
                   : 'border-gray-300 hover:border-gray-400'
               }`}
             >
-              <div className="font-medium">All Models</div>
-              <div className="text-sm text-gray-500">Show generations from all models</div>
+              <div className="font-medium">Todos os Modelos</div>
+              <div className="text-sm text-gray-500">Mostrar gerações de todos os modelos</div>
             </button>
             
             {models.map((model) => (
@@ -136,7 +136,7 @@ export function FilterPanel({ models, selectedModel, onModelSelect, onClose }: F
         <div>
           <h3 className="font-medium text-gray-900 mb-3 flex items-center">
             <Calendar className="w-4 h-4 mr-2" />
-            Created
+            Criado em
           </h3>
           <div className="grid grid-cols-2 gap-2">
             {timeRanges.map((range) => (
@@ -154,7 +154,7 @@ export function FilterPanel({ models, selectedModel, onModelSelect, onClose }: F
         <div>
           <h3 className="font-medium text-gray-900 mb-3 flex items-center">
             <Image className="w-4 h-4 mr-2" />
-            Image Count
+            Quantidade de Imagens
           </h3>
           <div className="space-y-2">
             {imageCountRanges.map((range) => (
@@ -170,19 +170,19 @@ export function FilterPanel({ models, selectedModel, onModelSelect, onClose }: F
 
         {/* Quick Filters */}
         <div>
-          <h3 className="font-medium text-gray-900 mb-3">Quick Filters</h3>
+          <h3 className="font-medium text-gray-900 mb-3">Filtros Rápidos</h3>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm">
-              Recent
+              Recentes
             </Button>
             <Button variant="outline" size="sm">
-              Favorites
+              Favoritos
             </Button>
             <Button variant="outline" size="sm">
-              High Quality
+              Alta Qualidade
             </Button>
             <Button variant="outline" size="sm">
-              Multiple Images
+              Múltiplas Imagens
             </Button>
           </div>
         </div>
@@ -197,7 +197,7 @@ export function FilterPanel({ models, selectedModel, onModelSelect, onClose }: F
               // Reset other filters here
             }}
           >
-            Clear All Filters
+            Limpar Todos os Filtros
           </Button>
         </div>
       </CardContent>

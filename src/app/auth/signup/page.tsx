@@ -26,13 +26,13 @@ export default function SignUpPage() {
     setError('')
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match')
+      setError('As senhas não coincidem')
       setIsLoading(false)
       return
     }
 
     if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters')
+      setError('A senha deve ter pelo menos 6 caracteres')
       setIsLoading(false)
       return
     }
@@ -61,15 +61,16 @@ export default function SignUpPage() {
         })
 
         if (result?.error) {
-          setError('Account created but sign in failed. Please try signing in manually.')
+          setError('Conta criada, mas falha no login. Tente fazer login manualmente.')
         } else {
-          router.push('/dashboard')
+          // New users need to select a plan before accessing features
+          router.push('/pricing?newuser=true')
         }
       } else {
-        setError(data.error || 'Failed to create account')
+        setError(data.error || 'Falha ao criar conta')
       }
     } catch (error) {
-      setError('An error occurred. Please try again.')
+      setError('Ocorreu um erro. Tente novamente.')
     } finally {
       setIsLoading(false)
     }
@@ -77,7 +78,8 @@ export default function SignUpPage() {
 
   const handleOAuthSignIn = async (provider: string) => {
     setIsLoading(true)
-    await signIn(provider, { callbackUrl: '/dashboard' })
+    // OAuth will handle redirect through NextAuth callback
+    await signIn(provider)
   }
 
   return (
@@ -86,17 +88,17 @@ export default function SignUpPage() {
         <div className="text-center mb-8">
           <Badge variant="secondary" className="mb-4">
             <Sparkles className="w-4 h-4 mr-2" />
-            Get Started
+            Comece Agora
           </Badge>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Create your account</h1>
-          <p className="text-gray-600">Start creating amazing AI photos today</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Crie sua conta</h1>
+          <p className="text-gray-600">Comece a criar fotos incríveis com IA hoje</p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Sign Up</CardTitle>
+            <CardTitle>Cadastrar-se</CardTitle>
             <CardDescription>
-              Create a new account to get started with AI photo generation
+              Crie uma nova conta para começar com geração de fotos com IA
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -115,7 +117,7 @@ export default function SignUpPage() {
                 disabled={isLoading}
               >
                 <Mail className="w-4 h-4 mr-2" />
-                Continue with Google
+                Continuar com Google
               </Button>
               <Button
                 variant="outline"
@@ -124,7 +126,7 @@ export default function SignUpPage() {
                 disabled={isLoading}
               >
                 <Github className="w-4 h-4 mr-2" />
-                Continue with GitHub
+                Continuar com GitHub
               </Button>
             </div>
 
@@ -133,7 +135,7 @@ export default function SignUpPage() {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                <span className="bg-background px-2 text-muted-foreground">Ou continue com</span>
               </div>
             </div>
 
@@ -141,7 +143,7 @@ export default function SignUpPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Full Name
+                  Nome Completo
                 </label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -152,7 +154,7 @@ export default function SignUpPage() {
                     onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                     required
                     className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="Enter your full name"
+                    placeholder="Digite seu nome completo"
                   />
                 </div>
               </div>
@@ -170,14 +172,14 @@ export default function SignUpPage() {
                     onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                     required
                     className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="Enter your email"
+                    placeholder="Digite seu email"
                   />
                 </div>
               </div>
 
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                  Password
+                  Senha
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -188,14 +190,14 @@ export default function SignUpPage() {
                     onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
                     required
                     className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="Create a password"
+                    placeholder="Crie uma senha"
                   />
                 </div>
               </div>
 
               <div>
                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                  Confirm Password
+                  Confirmar Senha
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -206,31 +208,31 @@ export default function SignUpPage() {
                     onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
                     required
                     className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="Confirm your password"
+                    placeholder="Confirme sua senha"
                   />
                 </div>
               </div>
 
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Creating account...' : 'Create Account'}
+                {isLoading ? 'Criando conta...' : 'Criar Conta'}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </form>
 
             <div className="text-center">
               <p className="text-sm text-gray-600">
-                Already have an account?{' '}
+                Já tem uma conta?{' '}
                 <Link href="/auth/signin" className="text-purple-600 hover:underline font-medium">
-                  Sign in
+                  Entrar
                 </Link>
               </p>
             </div>
 
             <div className="text-xs text-gray-500 text-center">
-              By creating an account, you agree to our{' '}
-              <Link href="/terms" className="underline">Terms of Service</Link>{' '}
-              and{' '}
-              <Link href="/privacy" className="underline">Privacy Policy</Link>
+              Ao criar uma conta, você concorda com nossos{' '}
+              <Link href="/terms" className="underline">Termos de Serviço</Link>{' '}
+              e{' '}
+              <Link href="/privacy" className="underline">Política de Privacidade</Link>
             </div>
           </CardContent>
         </Card>

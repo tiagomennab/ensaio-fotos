@@ -1,13 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { WebhookPayload } from '@/lib/ai/base'
+import crypto from 'crypto'
 
 export async function POST(request: NextRequest) {
   try {
-    const payload: WebhookPayload = await request.json()
+    // Webhook security validation
+    let payload: WebhookPayload
+    const webhookSecret = process.env.REPLICATE_WEBHOOK_SECRET
+    
+    if (webhookSecret) {
+      const signature = request.headers.get('webhook-signature')
+      const body = await request.text()
+      
+      if (!signature || !verifyWebhookSignature(body, signature, webhookSecret)) {
+        console.log('Training webhook: Invalid signature')
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+      }
+      
+      // Parse JSON after verification
+      payload = JSON.parse(body)
+    } else {
+      // No secret configured, parse normally but log warning
+      console.warn('Training webhook: No REPLICATE_WEBHOOK_SECRET configured - webhook not secured')
+      payload = await request.json()
+    }
     
     // Find the model that is currently training
-    // Since trainingJobId is not in the schema, we'll find by status and recent activity
+    // For better accuracy, we should ideally store the trainingJobId in the database
+    // This is a fallback approach - consider adding trainingJobId field to AIModel schema
     const model = await prisma.aIModel.findFirst({
       where: {
         status: 'TRAINING',
@@ -19,9 +40,13 @@ export async function POST(request: NextRequest) {
         user: {
           select: {
             id: true,
-            email: true
+            email: true,
+            plan: true
           }
         }
+      },
+      orderBy: {
+        updatedAt: 'desc' // Get the most recently updated training model
       }
     })
 
@@ -47,12 +72,22 @@ export async function POST(request: NextRequest) {
         updateData.status = 'READY'
         updateData.trainingCompletedAt = new Date()
         
-        if (payload.output?.weights) {
-          updateData.modelUrl = payload.output.weights
+        // FLUX training outputs the model directly, not weights
+        if (payload.output) {
+          updateData.modelUrl = payload.output
         }
         
         // Calculate quality score based on training metrics
         updateData.qualityScore = calculateQualityScore(payload)
+        
+        // Store FLUX-specific metadata
+        updateData.metadata = {
+          ...model.metadata,
+          trainingCompleted: true,
+          fluxModel: true,
+          destination: payload.output,
+          version: payload.version
+        }
         
         break
 
@@ -157,23 +192,25 @@ async function refundTrainingCredits(modelId: string, userId: string) {
 }
 
 function calculateQualityScore(payload: WebhookPayload): number {
-  // Calculate quality score based on training metrics
-  // This is a simplified version - in practice you'd use actual training metrics
+  // Calculate quality score based on FLUX training metrics
+  // FLUX training is typically faster and more efficient
   
-  let score = 75 // Base score
+  let score = 80 // Higher base score for FLUX
   
   // Check if training completed successfully
   if (payload.status === 'succeeded') {
-    score += 10
+    score += 15 // Higher bonus for FLUX success
   }
   
-  // Check training time (faster might indicate better optimization)
+  // FLUX training time optimization (FLUX is typically faster)
   if (payload.metrics?.total_time) {
     const trainingTimeMinutes = payload.metrics.total_time / 60
-    if (trainingTimeMinutes < 30) {
+    if (trainingTimeMinutes < 15) {
+      score += 10 // FLUX can train very quickly
+    } else if (trainingTimeMinutes < 30) {
       score += 5
-    } else if (trainingTimeMinutes > 120) {
-      score -= 5
+    } else if (trainingTimeMinutes > 60) {
+      score -= 5 // Still good but slower than expected for FLUX
     }
   }
   
@@ -182,7 +219,14 @@ function calculateQualityScore(payload: WebhookPayload): number {
     score -= 5
   }
   
-  return Math.max(10, Math.min(100, score))
+  // FLUX-specific quality indicators
+  if (payload.logs && payload.logs.some(log => 
+    log.toLowerCase().includes('lora') || 
+    log.toLowerCase().includes('flux'))) {
+    score += 5 // Bonus for proper FLUX/LoRA training
+  }
+  
+  return Math.max(20, Math.min(100, score))
 }
 
 async function sendTrainingNotification(email: string, modelName: string, status: string) {
@@ -197,4 +241,24 @@ async function sendTrainingNotification(email: string, modelName: string, status
   //   subject: `Model Training ${status === 'succeeded' ? 'Completed' : 'Failed'}`,
   //   html: `Your model "${modelName}" training has ${status}.`
   // })
+}
+
+function verifyWebhookSignature(body: string, signature: string, secret: string): boolean {
+  try {
+    // Replicate uses HMAC-SHA256 for webhook signatures
+    const computedSignature = crypto
+      .createHmac('sha256', secret)
+      .update(body, 'utf8')
+      .digest('hex')
+    
+    // Compare signatures (use timing-safe comparison)
+    const expectedSignature = `sha256=${computedSignature}`
+    return crypto.timingSafeEqual(
+      Buffer.from(signature),
+      Buffer.from(expectedSignature)
+    )
+  } catch (error) {
+    console.error('Error verifying webhook signature:', error)
+    return false
+  }
 }

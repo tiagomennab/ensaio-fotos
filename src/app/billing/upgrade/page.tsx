@@ -13,9 +13,10 @@ function UpgradePageContent() {
   const { data: session } = useSession()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const selectedPlan = searchParams.get('plan') || 'PREMIUM'
-
-  const [step, setStep] = useState(1)
+  const planFromUrl = searchParams.get('plan')
+  
+  const [selectedPlan, setSelectedPlan] = useState(planFromUrl || 'STARTER')
+  const [step, setStep] = useState(planFromUrl ? 1 : 0)
   const [loading, setLoading] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState('CREDIT_CARD')
   const [customerData, setCustomerData] = useState({
@@ -59,17 +60,60 @@ function UpgradePageContent() {
     }
   }, [session])
 
-  const planDetails = {
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
+
+  interface Plan {
+    id: 'STARTER' | 'PREMIUM' | 'GOLD'
+    name: string
+    monthlyPrice: number
+    annualPrice: number
+    monthlyEquivalent: number
+    description: string
+    features: string[]
+    popular: boolean
+    color: 'blue' | 'purple' | 'yellow'
+  }
+
+  const planDetails: Record<string, Plan> = {
+    STARTER: {
+      id: 'STARTER',
+      name: 'Starter',
+      monthlyPrice: 89,
+      annualPrice: 708,
+      monthlyEquivalent: 59,
+      description: 'Ideal para começar',
+      features: ['1 modelo de IA por mês', '50 créditos por mês', 'Resolução padrão'],
+      popular: false,
+      color: 'blue'
+    },
     PREMIUM: {
+      id: 'PREMIUM',
       name: 'Premium',
-      price: 19.90,
-      features: ['3 AI models', '100 generations/month', '1024x1024 resolution', 'No watermarks']
+      monthlyPrice: 269,
+      annualPrice: 2148,
+      monthlyEquivalent: 179,
+      description: 'Para usuários regulares',
+      features: ['3 modelos de IA por mês', '200 créditos por mês', 'Alta resolução'],
+      popular: true,
+      color: 'purple'
     },
     GOLD: {
+      id: 'GOLD',
       name: 'Gold',
-      price: 49.90,
-      features: ['Unlimited models', '500 generations/month', '2048x2048 resolution', 'API access']
+      monthlyPrice: 449,
+      annualPrice: 3588,
+      monthlyEquivalent: 299,
+      description: 'Para uso intensivo',
+      features: ['10 modelos de IA por mês', '1000 créditos por mês', 'Máxima resolução'],
+      popular: false,
+      color: 'yellow'
     }
+  }
+
+  const calculateSavings = (monthlyPrice: number, annualPrice: number) => {
+    const savings = (monthlyPrice * 12) - annualPrice
+    const monthsEquivalent = Math.round(savings / monthlyPrice)
+    return { savings, monthsEquivalent }
   }
 
   const currentPlan = planDetails[selectedPlan as keyof typeof planDetails]
@@ -83,15 +127,31 @@ function UpgradePageContent() {
         body: JSON.stringify(customerData)
       })
 
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Response error:', response.status, errorText)
+        alert(`Erro do servidor (${response.status}): ${errorText}`)
+        return
+      }
+
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text()
+        console.error('Non-JSON response:', textResponse)
+        alert('Resposta inválida do servidor')
+        return
+      }
+
       const data = await response.json()
       
       if (data.success) {
         setStep(2)
       } else {
-        alert('Erro ao criar cliente: ' + data.error)
+        alert('Erro ao criar cliente: ' + (data.error || 'Erro desconhecido'))
       }
     } catch (error) {
-      alert('Erro na comunicação com servidor')
+      console.error('Client error:', error)
+      alert('Erro na comunicação com servidor: ' + (error as Error).message)
     } finally {
       setLoading(false)
     }
@@ -101,9 +161,9 @@ function UpgradePageContent() {
     setLoading(true)
     try {
       const subscriptionData = {
-        customerId: session?.user?.id, // This should be the Asaas customer ID
+        customerId: session?.user?.stripeCustomerId, // Asaas customer ID salvo na sessão
         plan: selectedPlan,
-        cycle: 'MONTHLY',
+        cycle: billingCycle === 'annual' ? 'ANNUAL' : 'MONTHLY',
         billingType: paymentMethod,
         ...(paymentMethod === 'CREDIT_CARD' && {
           creditCard: {
@@ -123,6 +183,21 @@ function UpgradePageContent() {
         body: JSON.stringify(subscriptionData)
       })
 
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Response error:', response.status, errorText)
+        alert(`Erro do servidor (${response.status}): ${errorText}`)
+        return
+      }
+
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text()
+        console.error('Non-JSON response:', textResponse)
+        alert('Resposta inválida do servidor')
+        return
+      }
+
       const data = await response.json()
       
       if (data.success) {
@@ -134,10 +209,11 @@ function UpgradePageContent() {
           router.push('/billing/success')
         }
       } else {
-        alert('Erro ao criar assinatura: ' + data.error)
+        alert('Erro ao criar assinatura: ' + (data.error || 'Erro desconhecido'))
       }
     } catch (error) {
-      alert('Erro na comunicação com servidor')
+      console.error('Client error:', error)
+      alert('Erro na comunicação com servidor: ' + (error as Error).message)
     } finally {
       setLoading(false)
     }
@@ -161,22 +237,148 @@ function UpgradePageContent() {
               </Button>
             </div>
             <Badge variant="secondary">
-              Step {step} of 2
+              {step === 0 ? 'Escolha do Plano' : `Etapa ${step} de 2`}
             </Badge>
           </div>
         </div>
       </header>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Plan Summary */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Upgrading to {currentPlan.name}</CardTitle>
-            <CardDescription>
-              R$ {currentPlan.price}/month • {currentPlan.features.join(' • ')}
-            </CardDescription>
-          </CardHeader>
-        </Card>
+        {/* Plan Summary - Only show if plan is selected */}
+        {step > 0 && (
+          <Card className="mb-8">
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    Upgrading to {currentPlan.name}
+                    <Button
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setStep(0)}
+                      className="text-xs"
+                    >
+                      Alterar Plano
+                    </Button>
+                  </CardTitle>
+                  <CardDescription>
+                    R$ {billingCycle === 'annual' ? currentPlan.annualPrice : currentPlan.monthlyPrice}{billingCycle === 'annual' ? '/ano' : '/mês'} • {currentPlan.features.slice(0, 2).join(' • ')}
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+        )}
+
+        {step === 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Escolha Seu Novo Plano</CardTitle>
+              <CardDescription>
+                {session?.user?.plan && (
+                  <span className="text-sm">
+                    Plano atual: <Badge variant="outline">{session.user.plan}</Badge>
+                  </span>
+                )}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Billing Cycle Toggle */}
+              <div className="flex items-center justify-center mb-8">
+                <div className="bg-gray-100 p-1 rounded-lg flex">
+                  <button
+                    onClick={() => setBillingCycle('monthly')}
+                    className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
+                      billingCycle === 'monthly'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Mensal
+                  </button>
+                  <button
+                    onClick={() => setBillingCycle('annual')}
+                    className={`px-8 py-2 rounded-md text-sm font-medium transition-all relative ${
+                      billingCycle === 'annual'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Anual
+                    <span className="absolute -top-3 -right-3 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full whitespace-nowrap">
+                      4 meses grátis
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-6">
+                {Object.values(planDetails).map((plan) => (
+                  <Card 
+                    key={plan.id}
+                    className={`cursor-pointer transition-colors border-2 ${
+                      selectedPlan === plan.id 
+                        ? `border-${plan.color}-500 bg-${plan.color}-50 scale-105` 
+                        : `border-gray-200 hover:border-${plan.color}-300`
+                    } ${plan.popular ? 'relative' : ''}`}
+                    onClick={() => setSelectedPlan(plan.id)}
+                  >
+                    {plan.popular && (
+                      <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-purple-600">
+                        Mais Popular
+                      </Badge>
+                    )}
+                    
+                    <CardHeader className="text-center pb-4">
+                      <CardTitle className="text-xl">{plan.name}</CardTitle>
+                      <div className="text-center">
+                        {billingCycle === 'annual' ? (
+                          <>
+                            <div className="text-2xl font-bold">
+                              R$ {plan.annualPrice}
+                              <span className="text-sm font-normal text-gray-500">/ano</span>
+                            </div>
+                            <div className="text-sm text-green-600 font-medium">
+                              R$ {plan.monthlyEquivalent}/mês
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              💸 Economize {calculateSavings(plan.monthlyPrice, plan.annualPrice).monthsEquivalent} meses!
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-2xl font-bold">
+                            R$ {plan.monthlyPrice}
+                            <span className="text-sm font-normal text-gray-500">/mês</span>
+                          </div>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div className="text-sm text-gray-600 mb-3">{plan.description}</div>
+                      <div className="space-y-1 text-sm">
+                        {plan.features.map((feature, index) => (
+                          <div key={index}>✓ {feature}</div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              <Button 
+                onClick={() => setStep(1)} 
+                className="w-full mt-6"
+                size="lg"
+              >
+                Continuar com {planDetails[selectedPlan].name} - R$ {
+                  billingCycle === 'annual' 
+                    ? planDetails[selectedPlan].annualPrice
+                    : planDetails[selectedPlan].monthlyPrice
+                }{billingCycle === 'annual' ? '/ano' : '/mês'}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {step === 1 && (
           <Card>
@@ -221,11 +423,14 @@ function UpgradePageContent() {
                   <input
                     type="text"
                     value={customerData.cpfCnpj}
-                    onChange={(e) => setCustomerData(prev => ({ ...prev, cpfCnpj: e.target.value }))}
+                    onChange={(e) => setCustomerData(prev => ({ ...prev, cpfCnpj: e.target.value.replace(/\D/g, '') }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    placeholder="000.000.000-00"
+                    placeholder="11144477735 (apenas números)"
                     required
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Para testes, use: 11144477735
+                  </p>
                 </div>
 
                 <div>
@@ -261,7 +466,7 @@ function UpgradePageContent() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <button
                     onClick={() => setPaymentMethod('CREDIT_CARD')}
                     className={`p-4 border rounded-lg text-center transition-colors ${
@@ -271,8 +476,21 @@ function UpgradePageContent() {
                     }`}
                   >
                     <CreditCard className="w-6 h-6 mx-auto mb-2" />
-                    <div className="font-medium">Credit Card</div>
-                    <div className="text-sm text-gray-600">Instant</div>
+                    <div className="font-medium">Cartão de Crédito</div>
+                    <div className="text-sm text-gray-600">Pagamento instantâneo</div>
+                  </button>
+
+                  <button
+                    onClick={() => setPaymentMethod('DEBIT_CARD')}
+                    className={`p-4 border rounded-lg text-center transition-colors ${
+                      paymentMethod === 'DEBIT_CARD' 
+                        ? 'border-purple-500 bg-purple-50' 
+                        : 'border-gray-300'
+                    }`}
+                  >
+                    <CreditCard className="w-6 h-6 mx-auto mb-2" />
+                    <div className="font-medium">Cartão de Débito</div>
+                    <div className="text-sm text-gray-600">Débito à vista</div>
                   </button>
 
                   <button
@@ -285,43 +503,17 @@ function UpgradePageContent() {
                   >
                     <Smartphone className="w-6 h-6 mx-auto mb-2" />
                     <div className="font-medium">PIX</div>
-                    <div className="text-sm text-gray-600">Instant</div>
-                  </button>
-
-                  <button
-                    onClick={() => setPaymentMethod('BOLETO')}
-                    className={`p-4 border rounded-lg text-center transition-colors ${
-                      paymentMethod === 'BOLETO' 
-                        ? 'border-purple-500 bg-purple-50' 
-                        : 'border-gray-300'
-                    }`}
-                  >
-                    <FileText className="w-6 h-6 mx-auto mb-2" />
-                    <div className="font-medium">Boleto</div>
-                    <div className="text-sm text-gray-600">1-2 days</div>
-                  </button>
-
-                  <button
-                    onClick={() => setPaymentMethod('BANK_TRANSFER')}
-                    className={`p-4 border rounded-lg text-center transition-colors ${
-                      paymentMethod === 'BANK_TRANSFER' 
-                        ? 'border-purple-500 bg-purple-50' 
-                        : 'border-gray-300'
-                    }`}
-                  >
-                    <Building2 className="w-6 h-6 mx-auto mb-2" />
-                    <div className="font-medium">Bank Transfer</div>
-                    <div className="text-sm text-gray-600">1-2 days</div>
+                    <div className="text-sm text-gray-600">Pagamento instantâneo</div>
                   </button>
                 </div>
               </CardContent>
             </Card>
 
             {/* Credit Card Form */}
-            {paymentMethod === 'CREDIT_CARD' && (
+            {(paymentMethod === 'CREDIT_CARD' || paymentMethod === 'DEBIT_CARD') && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Credit Card Information</CardTitle>
+                  <CardTitle>Informações do Cartão</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -402,7 +594,7 @@ function UpgradePageContent() {
             )}
 
             <Button onClick={handleCreateSubscription} disabled={loading} className="w-full">
-              {loading ? 'Processing...' : `Complete Payment - R$ ${currentPlan.price}`}
+              {loading ? 'Processando...' : `Finalizar Pagamento - R$ ${billingCycle === 'annual' ? currentPlan.annualPrice : currentPlan.monthlyPrice}`}
             </Button>
           </div>
         )}

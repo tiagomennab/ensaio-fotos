@@ -26,65 +26,65 @@ export function GalleryStats({ stats }: GalleryStatsProps) {
     <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Images</CardTitle>
+          <CardTitle className="text-sm font-medium">Total de Imagens</CardTitle>
           <Image className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{stats.totalImages}</div>
           <p className="text-xs text-muted-foreground">
-            AI-generated photos
+            Fotos geradas por IA
           </p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Generations</CardTitle>
+          <CardTitle className="text-sm font-medium">Gerações</CardTitle>
           <Sparkles className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{stats.completedGenerations}</div>
           <p className="text-xs text-muted-foreground">
-            of {stats.totalGenerations} total
+            de {stats.totalGenerations} total
           </p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+          <CardTitle className="text-sm font-medium">Taxa de Sucesso</CardTitle>
           <TrendingUp className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{successRate}%</div>
           <p className="text-xs text-muted-foreground">
-            Successful generations
+            Gerações bem-sucedidas
           </p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Favorites</CardTitle>
+          <CardTitle className="text-sm font-medium">Favoritas</CardTitle>
           <Heart className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{stats.favoriteImages}</div>
           <p className="text-xs text-muted-foreground">
-            Saved images
+            Imagens salvas
           </p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Avg per Gen</CardTitle>
+          <CardTitle className="text-sm font-medium">Média por Ger</CardTitle>
           <FolderOpen className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{avgImagesPerGeneration}</div>
           <p className="text-xs text-muted-foreground">
-            Images per generation
+            Imagens por geração
           </p>
         </CardContent>
       </Card>

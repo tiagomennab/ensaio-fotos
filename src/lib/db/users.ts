@@ -15,7 +15,7 @@ export async function createUser(data: {
     data: {
       ...data,
       password: hashedPassword,
-      creditsLimit: getCreditsLimitForPlan(data.plan || Plan.FREE)
+      creditsLimit: getCreditsLimitForPlan(data.plan || Plan.STARTER)
     }
   })
 }
@@ -92,13 +92,26 @@ export async function verifyPassword(password: string, hashedPassword: string) {
 
 function getCreditsLimitForPlan(plan: Plan): number {
   switch (plan) {
-    case Plan.FREE:
-      return 10
+    case Plan.STARTER:
+      return 50  // 50 créditos por mês
     case Plan.PREMIUM:
-      return 100
+      return 200 // 200 créditos por mês
     case Plan.GOLD:
-      return 500
+      return 1000 // 1000 créditos por mês
     default:
-      return 10
+      return 50
+  }
+}
+
+export function getModelsLimitForPlan(plan: Plan): number {
+  switch (plan) {
+    case Plan.STARTER:
+      return 1   // 1 modelo por mês
+    case Plan.PREMIUM:
+      return 3   // 3 modelos por mês
+    case Plan.GOLD:
+      return 10  // 10 modelos por mês
+    default:
+      return 1
   }
 }

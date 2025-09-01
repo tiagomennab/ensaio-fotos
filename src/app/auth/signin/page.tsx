@@ -29,12 +29,29 @@ export default function SignInPage() {
       })
 
       if (result?.error) {
-        setError('Invalid email or password')
+        setError('Email ou senha inválidos')
       } else {
-        router.push('/dashboard')
+        // Check subscription status and redirect accordingly
+        try {
+          const response = await fetch('/api/subscription/status')
+          if (response.ok) {
+            const subscriptionInfo = await response.json()
+            if (subscriptionInfo.hasActiveSubscription) {
+              router.push('/dashboard')
+            } else {
+              router.push('/pricing?required=true')
+            }
+          } else {
+            // Fallback to dashboard if subscription check fails
+            router.push('/dashboard')
+          }
+        } catch (error) {
+          // Fallback to dashboard if subscription check fails
+          router.push('/dashboard')
+        }
       }
     } catch (error) {
-      setError('An error occurred. Please try again.')
+      setError('Ocorreu um erro. Tente novamente.')
     } finally {
       setIsLoading(false)
     }
@@ -42,7 +59,8 @@ export default function SignInPage() {
 
   const handleOAuthSignIn = async (provider: string) => {
     setIsLoading(true)
-    await signIn(provider, { callbackUrl: '/dashboard' })
+    // OAuth will handle redirect through NextAuth callback
+    await signIn(provider)
   }
 
   return (
@@ -51,17 +69,17 @@ export default function SignInPage() {
         <div className="text-center mb-8">
           <Badge variant="secondary" className="mb-4">
             <Sparkles className="w-4 h-4 mr-2" />
-            Welcome Back
+            Bem-vindo de Volta
           </Badge>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Sign in to your account</h1>
-          <p className="text-gray-600">Continue creating amazing AI photos</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Entre na sua conta</h1>
+          <p className="text-gray-600">Continue criando fotos incríveis com IA</p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Sign In</CardTitle>
+            <CardTitle>Entrar</CardTitle>
             <CardDescription>
-              Enter your credentials to access your account
+              Digite suas credenciais para acessar sua conta
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -80,7 +98,7 @@ export default function SignInPage() {
                 disabled={isLoading}
               >
                 <Mail className="w-4 h-4 mr-2" />
-                Continue with Google
+                Continuar com Google
               </Button>
               <Button
                 variant="outline"
@@ -89,7 +107,7 @@ export default function SignInPage() {
                 disabled={isLoading}
               >
                 <Github className="w-4 h-4 mr-2" />
-                Continue with GitHub
+                Continuar com GitHub
               </Button>
             </div>
 
@@ -98,7 +116,7 @@ export default function SignInPage() {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                <span className="bg-background px-2 text-muted-foreground">Ou continue com</span>
               </div>
             </div>
 
@@ -115,12 +133,12 @@ export default function SignInPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="Enter your email"
+                  placeholder="Digite seu email"
                 />
               </div>
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                  Password
+                  Senha
                 </label>
                 <input
                   id="password"
@@ -129,23 +147,23 @@ export default function SignInPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="Enter your password"
+                  placeholder="Digite sua senha"
                 />
               </div>
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Signing in...' : 'Sign In'}
+                {isLoading ? 'Entrando...' : 'Entrar'}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </form>
 
             <div className="text-center space-y-2">
               <Link href="/auth/forgot-password" className="text-sm text-purple-600 hover:underline">
-                Forgot your password?
+                Esqueceu sua senha?
               </Link>
               <p className="text-sm text-gray-600">
-                Don't have an account?{' '}
+                Não tem uma conta?{' '}
                 <Link href="/auth/signup" className="text-purple-600 hover:underline font-medium">
-                  Sign up
+                  Cadastre-se
                 </Link>
               </p>
             </div>

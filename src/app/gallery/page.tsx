@@ -56,14 +56,14 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Photo Gallery</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Galeria de Fotos</h1>
               <p className="text-gray-600 mt-1">
-                Browse and manage your AI-generated photos
+                Navegue e gerencie suas fotos geradas por IA
               </p>
             </div>
             <div className="flex items-center space-x-4">
               <div className="text-sm text-gray-600">
-                {stats.totalImages} photos in {stats.completedGenerations} generations
+                {stats.totalImages} fotos em {stats.completedGenerations} gerações
               </div>
             </div>
           </div>

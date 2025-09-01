@@ -4,7 +4,8 @@ import { useState, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Upload, X, AlertCircle, CheckCircle, User, Users } from 'lucide-react'
+import { Upload, X, AlertCircle, CheckCircle, User, Users, Shield, ExternalLink } from 'lucide-react'
+import Link from 'next/link'
 
 interface ModelCreationStep2Props {
   modelData: {
@@ -12,9 +13,10 @@ interface ModelCreationStep2Props {
     fullBodyPhotos: File[]
   }
   setModelData: (data: any) => void
+  consentAccepted: boolean
 }
 
-export function ModelCreationStep2({ modelData, setModelData }: ModelCreationStep2Props) {
+export function ModelCreationStep2({ modelData, setModelData, consentAccepted }: ModelCreationStep2Props) {
   const [activeUpload, setActiveUpload] = useState<'half' | 'full' | null>(null)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
 
@@ -229,6 +231,7 @@ export function ModelCreationStep2({ modelData, setModelData }: ModelCreationSte
 
   return (
     <div className="space-y-6">
+
       {/* Progress Overview */}
       <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200">
         <CardContent className="pt-6">

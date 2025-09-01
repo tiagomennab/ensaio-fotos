@@ -1,5 +1,5 @@
 import { requireAuth } from '@/lib/auth'
-import { getModelsByUserId, canUserCreateModel } from '@/lib/db/models'
+import { getModelsByUserId, canUserCreateModel, getModelLimitsByPlan } from '@/lib/db/models'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -17,6 +17,9 @@ export default async function ModelsPage() {
     canUserCreateModel(userId)
   ])
 
+  const modelLimits = getModelLimitsByPlan(session.user.plan)
+  const activeModels = models.filter(m => m.status !== 'DELETED').length
+
   const modelsByStatus = {
     ready: models.filter(m => m.status === 'READY'),
     training: models.filter(m => ['TRAINING', 'PROCESSING', 'UPLOADING'].includes(m.status)),
@@ -31,27 +34,37 @@ export default async function ModelsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">My AI Models</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Meus Modelos de IA</h1>
               <p className="text-gray-600 mt-1">
-                Manage your custom AI models for photo generation
+                Gerencie seus modelos personalizados de IA para geração de fotos
               </p>
             </div>
             <div className="flex items-center space-x-4">
-              <Badge variant="secondary">
-                {session.user.plan} Plan
-              </Badge>
+              <div className="text-right">
+                <Badge variant="secondary" className="mb-1">
+                  Plano {session.user.plan}
+                </Badge>
+                <p className="text-xs text-gray-500">
+                  {activeModels}/{modelLimits.limit === 10 ? '∞' : modelLimits.limit} modelos
+                </p>
+              </div>
               {canCreate ? (
                 <Button asChild>
                   <Link href="/models/create">
                     <Plus className="w-4 h-4 mr-2" />
-                    Create Model
+                    Criar Modelo
                   </Link>
                 </Button>
               ) : (
-                <Button disabled>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Limit Reached
-                </Button>
+                <div className="text-right">
+                  <Button disabled>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Limite Atingido
+                  </Button>
+                  <p className="text-xs text-amber-600 mt-1">
+                    Seu plano permite {modelLimits.label}
+                  </p>
+                </div>
               )}
             </div>
           </div>
@@ -63,20 +76,32 @@ export default async function ModelsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Models</CardTitle>
+              <CardTitle className="text-sm font-medium">Modelos Ativos</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{models.length}</div>
+              <div className="text-2xl font-bold">
+                {activeModels}
+                <span className="text-lg text-gray-500">
+                  /{modelLimits.limit === 10 ? '∞' : modelLimits.limit}
+                </span>
+              </div>
               <p className="text-xs text-muted-foreground">
-                {modelsByStatus.ready.length} ready to use
+                {modelsByStatus.ready.length} prontos para uso
               </p>
+              {!canCreate && (
+                <div className="mt-2">
+                  <Badge variant="outline" className="text-amber-600 border-amber-300">
+                    Limite do {session.user.plan} atingido
+                  </Badge>
+                </div>
+              )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Ready</CardTitle>
+              <CardTitle className="text-sm font-medium">Prontos</CardTitle>
               <CheckCircle className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
@@ -84,14 +109,14 @@ export default async function ModelsPage() {
                 {modelsByStatus.ready.length}
               </div>
               <p className="text-xs text-muted-foreground">
-                Available for generation
+                Disponíveis para geração
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Training</CardTitle>
+              <CardTitle className="text-sm font-medium">Treinando</CardTitle>
               <Clock className="h-4 w-4 text-yellow-500" />
             </CardHeader>
             <CardContent>
@@ -99,14 +124,14 @@ export default async function ModelsPage() {
                 {modelsByStatus.training.length}
               </div>
               <p className="text-xs text-muted-foreground">
-                In progress
+                Em progresso
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">With Errors</CardTitle>
+              <CardTitle className="text-sm font-medium">Com Erros</CardTitle>
               <AlertCircle className="h-4 w-4 text-red-500" />
             </CardHeader>
             <CardContent>
@@ -114,30 +139,37 @@ export default async function ModelsPage() {
                 {modelsByStatus.error.length}
               </div>
               <p className="text-xs text-muted-foreground">
-                Need attention
+                Precisam de atenção
               </p>
             </CardContent>
           </Card>
         </div>
 
         {/* Plan Limits Info */}
-        {session.user.plan !== 'GOLD' && (
+        {!canCreate && (
           <Card className="mb-8 border-yellow-200 bg-yellow-50">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold text-yellow-800">
-                    Model Limit: {models.length}/{session.user.plan === 'FREE' ? '1' : '3'}
+                    Limite de Modelos: {activeModels}/{modelLimits.limit}
                   </h3>
                   <p className="text-yellow-700 text-sm">
-                    {session.user.plan === 'FREE' 
-                      ? 'Upgrade to Premium for 3 models, or Gold for unlimited models'
-                      : 'Upgrade to Gold for unlimited models'
-                    }
+                    {(() => {
+                      switch (session.user.plan) {
+                        case 'FREE':
+                        case 'STARTER':
+                          return 'Upgrade para Premium (3 modelos/mês) ou Gold (10 modelos/mês)'
+                        case 'PREMIUM':
+                          return 'Upgrade para Gold para ter até 10 modelos por mês'
+                        default:
+                          return 'Entre em contato para planos customizados'
+                      }
+                    })()}
                   </p>
                 </div>
                 <Button variant="outline" size="sm" asChild>
-                  <Link href="/billing">Upgrade Plan</Link>
+                  <Link href="/billing">Upgrade do Plano</Link>
                 </Button>
               </div>
             </CardContent>
@@ -150,26 +182,26 @@ export default async function ModelsPage() {
             <CardContent>
               <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                No AI Models Yet
+                Nenhum Modelo de IA Ainda
               </h3>
               <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                Create your first AI model by uploading photos of yourself or others. 
-                The model will learn to generate new photos in different styles and scenarios.
+                Crie seu primeiro modelo de IA enviando fotos suas ou de outras pessoas. 
+                O modelo irá aprender a gerar novas fotos em diferentes estilos e cenários.
               </p>
               {canCreate ? (
                 <Button asChild size="lg">
                   <Link href="/models/create">
                     <Plus className="w-5 h-5 mr-2" />
-                    Create Your First Model
+                    Criar Seu Primeiro Modelo
                   </Link>
                 </Button>
               ) : (
                 <div className="space-y-2">
                   <Button disabled size="lg">
-                    Model Limit Reached
+                    Limite de Modelos Atingido
                   </Button>
                   <p className="text-sm text-gray-500">
-                    Upgrade your plan to create more models
+                    Upgrade seu plano para criar mais modelos
                   </p>
                 </div>
               )}
@@ -182,7 +214,7 @@ export default async function ModelsPage() {
               <div>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
                   <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
-                  Ready Models ({modelsByStatus.ready.length})
+                  Modelos Prontos ({modelsByStatus.ready.length})
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {modelsByStatus.ready.map((model) => (
@@ -197,7 +229,7 @@ export default async function ModelsPage() {
               <div>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
                   <Clock className="w-5 h-5 text-yellow-500 mr-2" />
-                  Training Models ({modelsByStatus.training.length})
+                  Modelos em Treinamento ({modelsByStatus.training.length})
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {modelsByStatus.training.map((model) => (
@@ -212,7 +244,7 @@ export default async function ModelsPage() {
               <div>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
                   <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
-                  Models with Errors ({modelsByStatus.error.length})
+                  Modelos com Erros ({modelsByStatus.error.length})
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {modelsByStatus.error.map((model) => (
@@ -228,9 +260,9 @@ export default async function ModelsPage() {
         {models.length > 0 && (
           <Card className="mt-8">
             <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
+              <CardTitle>Ações Rápidas</CardTitle>
               <CardDescription>
-                Common tasks for managing your AI models
+                Tarefas comuns para gerenciar seus modelos de IA
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -238,14 +270,14 @@ export default async function ModelsPage() {
                 <Button variant="outline" asChild className="justify-start">
                   <Link href="/generate">
                     <Play className="w-4 h-4 mr-2" />
-                    Generate Photos
+                    Gerar Fotos
                   </Link>
                 </Button>
                 
                 <Button variant="outline" asChild className="justify-start">
                   <Link href="/gallery">
                     <Eye className="w-4 h-4 mr-2" />
-                    View Gallery
+                    Ver Galeria
                   </Link>
                 </Button>
                 
@@ -253,7 +285,7 @@ export default async function ModelsPage() {
                   <Button variant="outline" asChild className="justify-start">
                     <Link href="/models/create">
                       <Plus className="w-4 h-4 mr-2" />
-                      Create New Model
+                      Criar Novo Modelo
                     </Link>
                   </Button>
                 )}

@@ -34,6 +34,23 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(signInUrl)
     }
 
+    // Check if user has active plan for premium features
+    if (token && isProtectedPath) {
+      const userPlan = token.plan as string
+      
+      // Allow access to billing pages for plan management
+      if (pathname.startsWith('/billing')) {
+        return NextResponse.next()
+      }
+      
+      // Redirect users without active plan to pricing page
+      if (!userPlan || userPlan === 'FREE' || userPlan === 'TRIAL') {
+        const pricingUrl = new URL('/pricing', request.url)
+        pricingUrl.searchParams.set('required', 'true')
+        return NextResponse.redirect(pricingUrl)
+      }
+    }
+
     // Add basic security headers
     const response = NextResponse.next()
     response.headers.set('X-Frame-Options', 'DENY')

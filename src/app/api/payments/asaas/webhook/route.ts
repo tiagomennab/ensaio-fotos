@@ -1,13 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { asaas } from '@/lib/payments/asaas'
 import { updateSubscriptionStatus, getUserByAsaasCustomerId, logUsage } from '@/lib/db/subscriptions'
+import crypto from 'crypto'
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    // Webhook security validation for Asaas
+    let body: any
+    const asaasWebhookToken = process.env.ASAAS_WEBHOOK_TOKEN
+    
+    if (asaasWebhookToken) {
+      const asaasAccessToken = request.headers.get('asaas-access-token')
+      
+      if (!asaasAccessToken || asaasAccessToken !== asaasWebhookToken) {
+        console.log('Asaas webhook: Invalid access token')
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      
+      body = await request.json()
+    } else {
+      console.warn('Asaas webhook: No ASAAS_WEBHOOK_TOKEN configured - webhook not secured')
+      body = await request.json()
+    }
+
     const { event, payment, subscription } = body
 
-    console.log('Asaas Webhook received:', { event, payment: payment?.id, subscription: subscription?.id })
+    console.log('Asaas Webhook received:', { 
+      event, 
+      payment: payment?.id, 
+      subscription: subscription?.id,
+      timestamp: new Date().toISOString()
+    })
 
     switch (event) {
       case 'PAYMENT_CONFIRMED':

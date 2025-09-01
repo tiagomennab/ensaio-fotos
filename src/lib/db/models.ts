@@ -133,12 +133,29 @@ export async function canUserCreateModel(userId: string) {
   switch (user.plan) {
     case 'FREE':
       return modelCount < 1
+    case 'STARTER':
+      return modelCount < 1
     case 'PREMIUM':
       return modelCount < 3
     case 'GOLD':
-      return true // unlimited
+      return modelCount < 10
     default:
       return false
+  }
+}
+
+export function getModelLimitsByPlan(plan: string) {
+  switch (plan) {
+    case 'FREE':
+      return { limit: 1, label: '1 modelo' }
+    case 'STARTER':
+      return { limit: 1, label: '1 modelo por mês' }
+    case 'PREMIUM':
+      return { limit: 3, label: '3 modelos por mês' }
+    case 'GOLD':
+      return { limit: 10, label: '10 modelos por mês' }
+    default:
+      return { limit: 0, label: 'Nenhum modelo' }
   }
 }
 

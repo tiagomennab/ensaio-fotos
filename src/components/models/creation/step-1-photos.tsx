@@ -4,7 +4,8 @@ import { useState, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Upload, X, User, Users, Heart, AlertCircle, CheckCircle } from 'lucide-react'
+import { Upload, X, User, Users, Heart, AlertCircle, CheckCircle, Shield, ExternalLink } from 'lucide-react'
+import Link from 'next/link'
 
 interface ModelCreationStep1Props {
   modelData: {
@@ -13,9 +14,10 @@ interface ModelCreationStep1Props {
     facePhotos: File[]
   }
   setModelData: (data: any) => void
+  consentAccepted: boolean
 }
 
-export function ModelCreationStep1({ modelData, setModelData }: ModelCreationStep1Props) {
+export function ModelCreationStep1({ modelData, setModelData, consentAccepted }: ModelCreationStep1Props) {
   const [dragActive, setDragActive] = useState(false)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
 
@@ -208,6 +210,7 @@ export function ModelCreationStep1({ modelData, setModelData }: ModelCreationSte
         </CardContent>
       </Card>
 
+
       {/* Face Photos Upload */}
       <Card>
         <CardHeader>
@@ -224,33 +227,45 @@ export function ModelCreationStep1({ modelData, setModelData }: ModelCreationSte
         <CardContent className="space-y-4">
           {/* Upload Area */}
           <div
-            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+            className={`border-2 border-dashed rounded-lg p-6 text-center transition-all duration-200 ${
               dragActive 
-                ? 'border-purple-500 bg-purple-50' 
-                : 'border-gray-300 hover:border-gray-400'
+                ? 'border-purple-500 bg-purple-50 scale-102' 
+                : 'border-gray-300 hover:border-purple-300 hover:bg-gray-50'
             }`}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
           >
-            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <div className="space-y-2">
-              <p className="text-lg font-medium text-gray-900">
-                Drop face photos here, or{' '}
-                <label className="text-purple-600 cursor-pointer hover:underline">
-                  browse files
+            <div className="flex flex-col items-center space-y-4">
+              <div className={`p-3 rounded-full transition-colors ${
+                dragActive ? 'bg-purple-100' : 'bg-gray-100'
+              }`}>
+                <Upload className={`w-8 h-8 ${
+                  dragActive ? 'text-purple-600' : 'text-gray-400'
+                }`} />
+              </div>
+              
+              <div className="space-y-2">
+                <p className="text-lg font-medium text-gray-900">
+                  {dragActive ? 'Solte as fotos aqui!' : 'Arraste fotos do rosto ou'}
+                </p>
+                
+                <label className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-md cursor-pointer hover:bg-purple-700 transition-colors">
+                  <Upload className="w-4 h-4 mr-2" />
+                  Selecionar Arquivos
                   <input
                     type="file"
                     multiple
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp"
                     className="hidden"
                     onChange={(e) => e.target.files && handleFileSelect(e.target.files)}
                   />
                 </label>
-              </p>
-              <p className="text-sm text-gray-500">
-                PNG, JPG, WebP up to 10MB each
-              </p>
+                
+                <p className="text-sm text-gray-500">
+                  PNG, JPG, WebP • Máx 10MB cada • {modelData.facePhotos.length}/8 fotos
+                </p>
+              </div>
             </div>
           </div>
 

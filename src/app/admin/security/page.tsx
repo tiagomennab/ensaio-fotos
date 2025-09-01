@@ -1,6 +1,5 @@
 import { requireAuth } from '@/lib/auth'
 import { SecurityDashboard } from '@/components/admin/security-dashboard'
-import { Navigation } from '@/components/layout/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Shield, AlertTriangle } from 'lucide-react'
 import { redirect } from 'next/navigation'
@@ -15,7 +14,6 @@ export default async function AdminSecurityPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation userPlan={session.user.plan} />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}

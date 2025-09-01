@@ -11,6 +11,13 @@ declare module 'next-auth' {
       plan: Plan
       creditsUsed: number
       creditsLimit: number
+      // Billing (Asaas) – temporarily reused fields
+      stripeCustomerId?: string | null
+      subscriptionId?: string | null
+      subscriptionStatus?: string | null
+      // Enhanced subscription fields
+      hasActiveSubscription: boolean
+      isInDevelopmentMode: boolean
     }
   }
 
@@ -22,6 +29,13 @@ declare module 'next-auth' {
     plan: Plan
     creditsUsed: number
     creditsLimit: number
+    // Persisted billing fields in DB
+    stripeCustomerId?: string | null
+    subscriptionId?: string | null
+    subscriptionStatus?: string | null
+    // Enhanced subscription fields
+    hasActiveSubscription?: boolean
+    isInDevelopmentMode?: boolean
   }
 }
 
@@ -30,5 +44,11 @@ declare module 'next-auth/jwt' {
     plan: Plan
     creditsUsed: number
     creditsLimit: number
+    stripeCustomerId?: string | null
+    subscriptionId?: string | null
+    subscriptionStatus?: string | null
+    // Enhanced subscription fields
+    hasActiveSubscription?: boolean
+    isInDevelopmentMode?: boolean
   }
 }

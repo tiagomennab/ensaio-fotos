@@ -19,7 +19,7 @@ model User {
   emailVerified DateTime?
 
   // Subscription and billing
-  plan               Plan      @default(FREE)
+  plan               Plan      @default(STARTER)
   stripeCustomerId   String?   @unique
   subscriptionId     String?   @unique
   subscriptionStatus String?
@@ -45,6 +45,7 @@ model User {
   collections Collection[]
   apiKeys     ApiKey[]
   systemLogs  SystemLog[]
+  consents    UserConsent[]
 
   @@index([lastLoginAt])
   @@index([plan])
@@ -91,7 +92,7 @@ model VerificationToken {
 }
 
 enum Plan {
-  FREE
+  STARTER
   PREMIUM
   GOLD
 }
@@ -323,4 +324,37 @@ model SystemLog {
   @@index([createdAt])
   @@index([requestId])
   @@map("SystemLog")
+}
+
+// LGPD Consent Management
+model UserConsent {
+  id        String @id @default(cuid())
+  userId    String? // Can be null for anonymous users
+  ipAddress String
+  userAgent String
+  
+  // Consent preferences
+  essential    Boolean @default(true)  // Always true (essential cookies)
+  functional   Boolean @default(false)
+  analytics    Boolean @default(false)
+  marketing    Boolean @default(false)
+  
+  // Metadata
+  version      String          // Consent version (for tracking policy changes)
+  consentedAt  DateTime        // When user gave/updated consent
+  isRevocation Boolean @default(false) // True if this record represents consent withdrawal
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  @@index([userId])
+  @@index([ipAddress])
+  @@index([consentedAt])
+  @@index([version])
+  @@index([isRevocation])
+  @@map("user_consents")
 }

@@ -1,4 +1,4 @@
-import { requireAuth } from '@/lib/auth'
+import { requireActiveSubscription } from '@/lib/subscription'
 import { getReadyModelsByUserId } from '@/lib/db/models'
 import { canUserUseCredits } from '@/lib/db/users'
 import { redirect } from 'next/navigation'
@@ -11,7 +11,7 @@ interface GeneratePageProps {
 }
 
 export default async function GeneratePage({ searchParams }: GeneratePageProps) {
-  const session = await requireAuth()
+  const session = await requireActiveSubscription()
   const userId = session.user.id
 
   // Get user's ready models
@@ -44,14 +44,14 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Generate AI Photos</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Gerar Fotos com IA</h1>
               <p className="text-gray-600 mt-1">
-                Create stunning photos with your custom AI models
+                Crie fotos incríveis com seus modelos personalizados de IA
               </p>
             </div>
             <div className="flex items-center space-x-4">
               <div className="text-sm text-gray-600">
-                {session.user.creditsUsed}/{session.user.creditsLimit} credits used
+                {session.user.creditsUsed}/{session.user.creditsLimit} créditos usados
               </div>
               <div className="w-24 bg-gray-200 rounded-full h-2">
                 <div

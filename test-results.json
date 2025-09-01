@@ -1,0 +1,136 @@
+{
+  "summary": {
+    "passed": 6,
+    "failed": 4,
+    "successRate": 60
+  },
+  "tests": [
+    {
+      "test": "Replicate API Token Validation",
+      "status": "RUNNING",
+      "details": "Checking token validity...",
+      "timestamp": "2025-08-21T03:46:47.985Z"
+    },
+    {
+      "test": "Replicate API Token Validation",
+      "status": "PASS",
+      "details": "Token valid, found 0 previous trainings",
+      "timestamp": "2025-08-21T03:46:49.393Z"
+    },
+    {
+      "test": "Server Health Check",
+      "status": "RUNNING",
+      "details": "Checking server status...",
+      "timestamp": "2025-08-21T03:46:50.396Z"
+    },
+    {
+      "test": "Server Health Check",
+      "status": "FAIL",
+      "details": "Error: fetch failed",
+      "timestamp": "2025-08-21T03:46:50.401Z"
+    },
+    {
+      "test": "Authentication Flow",
+      "status": "RUNNING",
+      "details": "Testing login...",
+      "timestamp": "2025-08-21T03:46:51.406Z"
+    },
+    {
+      "test": "Authentication Flow",
+      "status": "FAIL",
+      "details": "Error: fetch failed",
+      "timestamp": "2025-08-21T03:46:51.409Z"
+    },
+    {
+      "test": "Replicate Provider Initialization",
+      "status": "RUNNING",
+      "details": "Testing provider setup...",
+      "timestamp": "2025-08-21T03:46:52.414Z"
+    },
+    {
+      "test": "Replicate Provider Initialization",
+      "status": "FAIL",
+      "details": "Error: fetch failed",
+      "timestamp": "2025-08-21T03:46:52.418Z"
+    },
+    {
+      "test": "FLUX Model Validation",
+      "status": "RUNNING",
+      "details": "Validating FLUX model versions...",
+      "timestamp": "2025-08-21T03:46:53.432Z"
+    },
+    {
+      "test": "FLUX Model Validation",
+      "status": "PASS",
+      "details": "Training model valid: b2a308762e36ac48d16bfadc03a65493fe6e799f429f7941639a6acec5b276cc",
+      "timestamp": "2025-08-21T03:46:54.191Z"
+    },
+    {
+      "test": "FLUX Model Validation",
+      "status": "PASS",
+      "details": "Generation model valid: d9fbf23e0a34bb6134f86d3e24f48c0dd96332378da307b5e9b60a9d47e4a9c2",
+      "timestamp": "2025-08-21T03:46:54.829Z"
+    },
+    {
+      "test": "Webhook Endpoints",
+      "status": "RUNNING",
+      "details": "Testing webhook availability...",
+      "timestamp": "2025-08-21T03:46:55.830Z"
+    },
+    {
+      "test": "Webhook Endpoints",
+      "status": "FAIL",
+      "details": "Error: fetch failed",
+      "timestamp": "2025-08-21T03:46:55.834Z"
+    },
+    {
+      "test": "Cost Calculations",
+      "status": "RUNNING",
+      "details": "Testing cost calculation functions...",
+      "timestamp": "2025-08-21T03:46:56.840Z"
+    },
+    {
+      "test": "Cost Calculations",
+      "status": "PASS",
+      "details": "Training: 24 credits, Generation: 2 credits",
+      "timestamp": "2025-08-21T03:46:56.840Z"
+    },
+    {
+      "test": "Upload Directory Structure",
+      "status": "RUNNING",
+      "details": "Checking upload directories...",
+      "timestamp": "2025-08-21T03:46:57.849Z"
+    },
+    {
+      "test": "Upload Directory Structure",
+      "status": "PASS",
+      "details": "All required directories exist",
+      "timestamp": "2025-08-21T03:46:57.850Z"
+    },
+    {
+      "test": "Quick Training Simulation",
+      "status": "RUNNING",
+      "details": "Testing minimal training request...",
+      "timestamp": "2025-08-21T03:46:58.858Z"
+    },
+    {
+      "test": "Quick Training Simulation",
+      "status": "PASS",
+      "details": "API accessible, can list trainings (0 found)",
+      "timestamp": "2025-08-21T03:46:59.354Z"
+    },
+    {
+      "test": "Generation Test",
+      "status": "RUNNING",
+      "details": "Testing image generation...",
+      "timestamp": "2025-08-21T03:47:00.360Z"
+    },
+    {
+      "test": "Generation Test",
+      "status": "PASS",
+      "details": "Generation created and canceled: 776xpnnjmnrm80crsayatdyea8",
+      "timestamp": "2025-08-21T03:47:01.445Z"
+    }
+  ],
+  "timestamp": "2025-08-21T03:47:02.448Z"
+}

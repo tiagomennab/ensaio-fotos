@@ -69,10 +69,10 @@ export function GalleryInterface({
   const [bulkSelectMode, setBulkSelectMode] = useState(false)
 
   const sortOptions = [
-    { value: 'newest', label: 'Newest First' },
-    { value: 'oldest', label: 'Oldest First' },
-    { value: 'model', label: 'By Model' },
-    { value: 'prompt', label: 'By Prompt' }
+    { value: 'newest', label: 'Mais Recentes' },
+    { value: 'oldest', label: 'Mais Antigas' },
+    { value: 'model', label: 'Por Modelo' },
+    { value: 'prompt', label: 'Por Prompt' }
   ]
 
   const updateFilter = (key: string, value: string | null) => {
@@ -149,7 +149,7 @@ export function GalleryInterface({
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by prompt, model name..."
+                  placeholder="Buscar por prompt, nome do modelo..."
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
                 {searchQuery && (
@@ -174,10 +174,10 @@ export function GalleryInterface({
               className="flex items-center"
             >
               <Filter className="w-4 h-4 mr-2" />
-              Filters
+              Filtros
               {hasActiveFilters && (
                 <Badge variant="secondary" className="ml-2">
-                  Active
+                  Ativo
                 </Badge>
               )}
             </Button>
@@ -222,11 +222,11 @@ export function GalleryInterface({
           {/* Active Filters */}
           {hasActiveFilters && (
             <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-gray-200">
-              <span className="text-sm text-gray-600">Active filters:</span>
+              <span className="text-sm text-gray-600">Filtros ativos:</span>
               
               {filters.model && (
                 <Badge variant="secondary" className="flex items-center gap-1">
-                  Model: {models.find(m => m.id === filters.model)?.name}
+                  Modelo: {models.find(m => m.id === filters.model)?.name}
                   <button onClick={() => updateFilter('model', null)}>
                     <X className="w-3 h-3" />
                   </button>
@@ -235,7 +235,7 @@ export function GalleryInterface({
               
               {filters.search && (
                 <Badge variant="secondary" className="flex items-center gap-1">
-                  Search: "{filters.search}"
+                  Busca: "{filters.search}"
                   <button onClick={() => updateFilter('search', null)}>
                     <X className="w-3 h-3" />
                   </button>
@@ -243,7 +243,7 @@ export function GalleryInterface({
               )}
               
               <Button variant="ghost" size="sm" onClick={clearFilters}>
-                Clear all
+                Limpar todos
               </Button>
             </div>
           )}
@@ -267,7 +267,7 @@ export function GalleryInterface({
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <span className="font-medium text-blue-900">
-                  {selectedImages.length} image{selectedImages.length !== 1 ? 's' : ''} selected
+                  {selectedImages.length} imagem{selectedImages.length !== 1 ? 'ns' : ''} selecionada{selectedImages.length !== 1 ? 's' : ''}
                 </span>
                 <Button
                   variant="ghost"
@@ -277,7 +277,7 @@ export function GalleryInterface({
                     setBulkSelectMode(false)
                   }}
                 >
-                  Cancel Selection
+                  Cancelar Seleção
                 </Button>
               </div>
               
@@ -288,7 +288,7 @@ export function GalleryInterface({
                   onClick={() => handleBulkAction('download')}
                 >
                   <Download className="w-4 h-4 mr-1" />
-                  Download
+                  Baixar
                 </Button>
                 <Button
                   size="sm"
@@ -296,7 +296,7 @@ export function GalleryInterface({
                   onClick={() => handleBulkAction('favorite')}
                 >
                   <Heart className="w-4 h-4 mr-1" />
-                  Favorite
+                  Favoritar
                 </Button>
                 <Button
                   size="sm"
@@ -304,7 +304,7 @@ export function GalleryInterface({
                   onClick={() => handleBulkAction('delete')}
                 >
                   <Trash2 className="w-4 h-4 mr-1" />
-                  Delete
+                  Excluir
                 </Button>
               </div>
             </div>
@@ -318,19 +318,19 @@ export function GalleryInterface({
           <CardContent>
             <Image className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              {hasActiveFilters ? 'No Results Found' : 'No Photos Yet'}
+              {hasActiveFilters ? 'Nenhum Resultado Encontrado' : 'Nenhuma Foto Ainda'}
             </h3>
             <p className="text-gray-600 mb-6">
               {hasActiveFilters 
-                ? 'Try adjusting your filters or search terms'
-                : 'Start generating AI photos to build your gallery'
+                ? 'Tente ajustar seus filtros ou termos de busca'
+                : 'Comece gerando fotos com IA para construir sua galeria'
               }
             </p>
             {hasActiveFilters ? (
-              <Button onClick={clearFilters}>Clear Filters</Button>
+              <Button onClick={clearFilters}>Limpar Filtros</Button>
             ) : (
               <Button asChild>
-                <a href="/generate">Generate Your First Photo</a>
+                <a href="/generate">Gere Sua Primeira Foto</a>
               </Button>
             )}
           </CardContent>
@@ -340,14 +340,14 @@ export function GalleryInterface({
           {/* Toggle Bulk Select */}
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-600">
-              Showing {generations.length} of {pagination.total} generations
+              Mostrando {generations.length} de {pagination.total} gerações
             </p>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setBulkSelectMode(!bulkSelectMode)}
             >
-              {bulkSelectMode ? 'Exit' : 'Select'} Multiple
+              {bulkSelectMode ? 'Sair' : 'Selecionar'} Múltiplas
             </Button>
           </div>
 
@@ -378,7 +378,7 @@ export function GalleryInterface({
                 disabled={pagination.page === 1}
                 onClick={() => updateFilter('page', (pagination.page - 1).toString())}
               >
-                Previous
+                Anterior
               </Button>
               
               <div className="flex items-center space-x-1">
@@ -402,7 +402,7 @@ export function GalleryInterface({
                 disabled={pagination.page === pagination.pages}
                 onClick={() => updateFilter('page', (pagination.page + 1).toString())}
               >
-                Next
+                Próxima
               </Button>
             </div>
           )}

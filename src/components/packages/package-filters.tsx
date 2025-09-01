@@ -22,7 +22,7 @@ interface PackageFiltersProps {
 }
 
 export function PackageFilters({ onClose }: PackageFiltersProps) {
-  const [priceRange, setPriceRange] = useState([0, 50])
+  const [priceRange, setPriceRange] = useState([0, 100])
   const [ratingFilter, setRatingFilter] = useState(0)
   const [showPremiumOnly, setShowPremiumOnly] = useState(false)
   const [showPopularOnly, setShowPopularOnly] = useState(false)
@@ -59,14 +59,14 @@ export function PackageFilters({ onClose }: PackageFiltersProps) {
   }
 
   return (
-    <Card>
+    <Card className="bg-gray-800 border-gray-700">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg flex items-center">
-            <Filter className="w-5 h-5 mr-2" />
+          <CardTitle className="text-lg flex items-center text-white">
+            <Filter className="w-5 h-5 mr-2 text-blue-400" />
             Filters
           </CardTitle>
-          <Button variant="ghost" size="sm" onClick={onClose}>
+          <Button variant="ghost" size="sm" onClick={onClose} className="text-gray-400 hover:text-white hover:bg-gray-700">
             <X className="w-4 h-4" />
           </Button>
         </div>
@@ -75,8 +75,8 @@ export function PackageFilters({ onClose }: PackageFiltersProps) {
       <CardContent className="space-y-6">
         {/* Price Range */}
         <div>
-          <h3 className="font-medium text-gray-900 mb-3 flex items-center">
-            <DollarSign className="w-4 h-4 mr-2" />
+          <h3 className="font-medium text-white mb-3 flex items-center">
+            <DollarSign className="w-4 h-4 mr-2 text-green-400" />
             Price Range
           </h3>
           <div className="space-y-3">
@@ -88,17 +88,17 @@ export function PackageFilters({ onClose }: PackageFiltersProps) {
               step={1}
               className="w-full"
             />
-            <div className="flex items-center justify-between text-sm text-gray-600">
-              <span>${priceRange[0]}</span>
-              <span>${priceRange[1]}</span>
+            <div className="flex items-center justify-between text-sm text-gray-400">
+              <span>R$ {priceRange[0]}</span>
+              <span>R$ {priceRange[1]}</span>
             </div>
           </div>
         </div>
 
         {/* Rating Filter */}
         <div>
-          <h3 className="font-medium text-gray-900 mb-3 flex items-center">
-            <Star className="w-4 h-4 mr-2" />
+          <h3 className="font-medium text-white mb-3 flex items-center">
+            <Star className="w-4 h-4 mr-2 text-yellow-400" />
             Minimum Rating
           </h3>
           <div className="space-y-2">
@@ -108,8 +108,8 @@ export function PackageFilters({ onClose }: PackageFiltersProps) {
                 onClick={() => setRatingFilter(rating)}
                 className={`w-full p-2 text-left border rounded-lg transition-colors ${
                   ratingFilter === rating
-                    ? 'border-purple-500 bg-purple-50 text-purple-700'
-                    : 'border-gray-300 hover:border-gray-400'
+                    ? 'border-blue-500 bg-blue-900/20 text-blue-300'
+                    : 'border-gray-600 hover:border-gray-500 bg-gray-700/50 text-gray-300'
                 }`}
               >
                 <div className="flex items-center space-x-2">
@@ -132,12 +132,12 @@ export function PackageFilters({ onClose }: PackageFiltersProps) {
 
         {/* Quick Filters */}
         <div>
-          <h3 className="font-medium text-gray-900 mb-3">Quick Filters</h3>
+          <h3 className="font-medium text-white mb-3">Quick Filters</h3>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Crown className="w-4 h-4 text-yellow-600" />
-                <span className="text-sm">Premium only</span>
+                <Crown className="w-4 h-4 text-yellow-400" />
+                <span className="text-sm text-gray-300">Premium only</span>
               </div>
               <Switch
                 checked={showPremiumOnly}
@@ -147,8 +147,8 @@ export function PackageFilters({ onClose }: PackageFiltersProps) {
             
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <TrendingUp className="w-4 h-4 text-orange-600" />
-                <span className="text-sm">Popular (90%+)</span>
+                <TrendingUp className="w-4 h-4 text-orange-400" />
+                <span className="text-sm text-gray-300">Popular (90%+)</span>
               </div>
               <Switch
                 checked={showPopularOnly}
@@ -160,16 +160,16 @@ export function PackageFilters({ onClose }: PackageFiltersProps) {
 
         {/* Categories */}
         <div>
-          <h3 className="font-medium text-gray-900 mb-3">Categories</h3>
+          <h3 className="font-medium text-white mb-3">Categories</h3>
           <div className="space-y-2">
             {categories.map((category) => (
               <button
                 key={category.id}
-                className="w-full p-3 text-left border border-gray-300 rounded-lg hover:border-gray-400 transition-colors"
+                className="w-full p-3 text-left border border-gray-600 rounded-lg hover:border-gray-500 bg-gray-700/50 hover:bg-gray-700 transition-colors"
               >
                 <div className="flex items-center space-x-2">
                   <span className="text-lg">{category.icon}</span>
-                  <span className="text-sm">{category.name}</span>
+                  <span className="text-sm text-gray-300">{category.name}</span>
                 </div>
               </button>
             ))}
@@ -178,12 +178,16 @@ export function PackageFilters({ onClose }: PackageFiltersProps) {
 
         {/* Tags */}
         <div>
-          <h3 className="font-medium text-gray-900 mb-3">Popular Tags</h3>
+          <h3 className="font-medium text-white mb-3">Popular Tags</h3>
           <div className="flex flex-wrap gap-2">
             {popularTags.map((tag) => (
               <Button
                 key={tag}
                 variant={selectedTags.includes(tag) ? "default" : "outline"}
+                className={selectedTags.includes(tag) 
+                  ? "bg-blue-600 text-white hover:bg-blue-700" 
+                  : "border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white"
+                }
                 size="sm"
                 onClick={() => toggleTag(tag)}
                 className="text-xs"
@@ -196,8 +200,8 @@ export function PackageFilters({ onClose }: PackageFiltersProps) {
 
         {/* Estimated Time */}
         <div>
-          <h3 className="font-medium text-gray-900 mb-3 flex items-center">
-            <Clock className="w-4 h-4 mr-2" />
+          <h3 className="font-medium text-white mb-3 flex items-center">
+            <Clock className="w-4 h-4 mr-2 text-purple-400" />
             Generation Time
           </h3>
           <div className="space-y-2">
@@ -208,9 +212,9 @@ export function PackageFilters({ onClose }: PackageFiltersProps) {
             ].map((option) => (
               <button
                 key={option.value}
-                className="w-full p-2 text-left border border-gray-300 rounded-lg hover:border-gray-400 transition-colors"
+                className="w-full p-2 text-left border border-gray-600 rounded-lg hover:border-gray-500 bg-gray-700/50 hover:bg-gray-700 transition-colors"
               >
-                <span className="text-sm">{option.label}</span>
+                <span className="text-sm text-gray-300">{option.label}</span>
               </button>
             ))}
           </div>
@@ -218,8 +222,8 @@ export function PackageFilters({ onClose }: PackageFiltersProps) {
 
         {/* Usage Stats */}
         <div>
-          <h3 className="font-medium text-gray-900 mb-3 flex items-center">
-            <Users className="w-4 h-4 mr-2" />
+          <h3 className="font-medium text-white mb-3 flex items-center">
+            <Users className="w-4 h-4 mr-2 text-blue-400" />
             Usage
           </h3>
           <div className="space-y-2">
@@ -230,45 +234,45 @@ export function PackageFilters({ onClose }: PackageFiltersProps) {
             ].map((option) => (
               <button
                 key={option.value}
-                className="w-full p-2 text-left border border-gray-300 rounded-lg hover:border-gray-400 transition-colors"
+                className="w-full p-2 text-left border border-gray-600 rounded-lg hover:border-gray-500 bg-gray-700/50 hover:bg-gray-700 transition-colors"
               >
-                <span className="text-sm">{option.label}</span>
+                <span className="text-sm text-gray-300">{option.label}</span>
               </button>
             ))}
           </div>
         </div>
 
         {/* Applied Filters Summary */}
-        {(priceRange[0] > 0 || priceRange[1] < 50 || ratingFilter > 0 || showPremiumOnly || showPopularOnly || selectedTags.length > 0) && (
-          <div className="pt-4 border-t border-gray-200">
-            <h4 className="font-medium text-gray-900 mb-2">Applied Filters</h4>
+        {(priceRange[0] > 0 || priceRange[1] < 100 || ratingFilter > 0 || showPremiumOnly || showPopularOnly || selectedTags.length > 0) && (
+          <div className="pt-4 border-t border-gray-700">
+            <h4 className="font-medium text-white mb-2">Applied Filters</h4>
             <div className="space-y-2">
-              {priceRange[0] > 0 || priceRange[1] < 50 ? (
-                <Badge variant="secondary">
-                  Price: ${priceRange[0]} - ${priceRange[1]}
+              {priceRange[0] > 0 || priceRange[1] < 100 ? (
+                <Badge variant="secondary" className="bg-gray-700 text-gray-300 border-gray-600">
+                  Preço: R$ {priceRange[0]} - R$ {priceRange[1]}
                 </Badge>
               ) : null}
               
               {ratingFilter > 0 && (
-                <Badge variant="secondary">
+                <Badge variant="secondary" className="bg-gray-700 text-gray-300 border-gray-600">
                   Rating: {ratingFilter}+ stars
                 </Badge>
               )}
               
               {showPremiumOnly && (
-                <Badge variant="secondary">
+                <Badge variant="secondary" className="bg-gray-700 text-gray-300 border-gray-600">
                   Premium only
                 </Badge>
               )}
               
               {showPopularOnly && (
-                <Badge variant="secondary">
+                <Badge variant="secondary" className="bg-gray-700 text-gray-300 border-gray-600">
                   Popular only
                 </Badge>
               )}
               
               {selectedTags.map((tag) => (
-                <Badge key={tag} variant="secondary">
+                <Badge key={tag} variant="secondary" className="bg-gray-700 text-gray-300 border-gray-600">
                   #{tag}
                 </Badge>
               ))}
@@ -280,7 +284,7 @@ export function PackageFilters({ onClose }: PackageFiltersProps) {
         <div className="pt-4 border-t border-gray-200">
           <Button
             variant="outline"
-            className="w-full"
+            className="w-full border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white"
             onClick={clearAllFilters}
           >
             Clear All Filters

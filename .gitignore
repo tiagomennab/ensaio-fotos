@@ -11,3 +11,4 @@ out/
 .vercel
 
 /generated/prisma
+.env.local

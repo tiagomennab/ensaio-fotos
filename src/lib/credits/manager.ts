@@ -25,6 +25,13 @@ export const PLAN_LIMITS: Record<Plan, CreditLimits> = {
     generation: 50, // 50 generations per month
     storage: 1 // 1GB storage
   },
+  STARTER: {
+    daily: 50,
+    monthly: 500,
+    training: 1, // 1 model training per month
+    generation: 100, // 100 generations per month
+    storage: 5 // 5GB storage
+  },
   PREMIUM: {
     daily: 100,
     monthly: 1000,

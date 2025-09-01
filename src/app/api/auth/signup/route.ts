@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     // Validate required fields
     if (!name || !email || !password) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Campos obrigatórios ausentes' },
         { status: 400 }
       )
     }
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
       return NextResponse.json(
-        { error: 'Invalid email format' },
+        { error: 'Formato de email inválido' },
         { status: 400 }
       )
     }
@@ -26,27 +26,46 @@ export async function POST(request: NextRequest) {
     // Validate password length
     if (password.length < 6) {
       return NextResponse.json(
-        { error: 'Password must be at least 6 characters' },
+        { error: 'A senha deve ter pelo menos 6 caracteres' },
         { status: 400 }
       )
     }
 
-    // Check if user already exists
-    const existingUser = await getUserByEmail(email)
+    // Check if user already exists (with database error handling)
+    let existingUser = null
+    try {
+      existingUser = await getUserByEmail(email)
+    } catch (error) {
+      console.error('Database connection error during signup check:', error)
+      return NextResponse.json(
+        { error: 'Sistema temporariamente indisponível. Tente novamente em alguns minutos.' },
+        { status: 503 }
+      )
+    }
+
     if (existingUser) {
       return NextResponse.json(
-        { error: 'User already exists' },
+        { error: 'Usuário já existe' },
         { status: 400 }
       )
     }
 
-    // Create new user
-    const user = await createUser({
-      name,
-      email,
-      password,
-      plan: Plan.FREE
-    })
+    // Create new user (with database error handling)
+    let user = null
+    try {
+      user = await createUser({
+        name,
+        email,
+        password,
+        plan: Plan.STARTER
+      })
+    } catch (error) {
+      console.error('Database connection error during user creation:', error)
+      return NextResponse.json(
+        { error: 'Sistema temporariamente indisponível. Tente novamente em alguns minutos.' },
+        { status: 503 }
+      )
+    }
 
     // Return success (don't include password)
     return NextResponse.json({
@@ -64,7 +83,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Signup error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Erro interno do servidor' },
       { status: 500 }
     )
   }
