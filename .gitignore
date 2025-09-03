@@ -12,3 +12,4 @@ out/
 
 /generated/prisma
 .env.local
+.env.local

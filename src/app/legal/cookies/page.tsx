@@ -256,7 +256,7 @@ export default function CookiesPage() {
               <ul className="list-disc pl-6 space-y-2">
                 <li><strong>Banner de Cookies:</strong> Aparece na primeira visita</li>
                 <li><strong>Central de Preferências:</strong> Acesse através do rodapé da página</li>
-                <li><strong>Configurações da Conta:</strong> Seção "Privacidade" em seu perfil</li>
+                <li><strong>Configurações da Conta:</strong> Seção &quot;Privacidade&quot; em seu perfil</li>
               </ul>
 
               <div className="bg-green-50 p-4 rounded-lg">
@@ -339,7 +339,7 @@ export default function CookiesPage() {
                 Esta Política de Cookies pode ser atualizada ocasionalmente. Quando isso acontecer:
               </p>
               <ul className="list-disc pl-6 space-y-2">
-                <li>A data de "última atualização" será alterada</li>
+                <li>A data de &quot;última atualização&quot; será alterada</li>
                 <li>Você será notificado através de um banner na próxima visita</li>
                 <li>Mudanças significativas serão comunicadas por email</li>
                 <li>Você poderá revisar e atualizar suas preferências</li>

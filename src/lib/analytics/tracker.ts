@@ -254,7 +254,7 @@ export class AnalyticsTracker {
     const mrr = 0
     
     // Calculate conversion rate based on plan upgrades (non-FREE users)
-    const paidUsers = await prisma.user.count({ where: { plan: { not: 'FREE' } } })
+    const paidUsers = await prisma.user.count({ where: { plan: { not: 'STARTER' } } })
     const conversionRate = totalUsers > 0 ? (paidUsers / totalUsers) * 100 : 0
 
     return {

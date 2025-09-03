@@ -10,7 +10,7 @@ const path = require('path');
 const FormData = require('form-data');
 
 const BASE_URL = 'http://localhost:3001';
-const REPLICATE_API_TOKEN = 'r8_aKGAAxZyfvl2nur07hL7zZ7C60Mt12v4LzkhG';
+const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN || 'your-replicate-api-token-here';
 
 // Test configuration
 const TEST_USER = {

@@ -462,7 +462,7 @@ function UpgradePageContent() {
               <CardHeader>
                 <CardTitle>Choose Payment Method</CardTitle>
                 <CardDescription>
-                  Select how you'd like to pay for your subscription
+                  Select how you&apos;d like to pay for your subscription
                 </CardDescription>
               </CardHeader>
               <CardContent>

@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { createGeneration } from '@/lib/db/generations'
 import { canUserUseCredits, updateUserCredits } from '@/lib/db/users'
 import { getModelById } from '@/lib/db/models'
+import { getAIProvider } from '@/lib/ai'
+import { prisma } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession()
+    const session = await getServerSession(authOptions)
     
     if (!session?.user) {
       return NextResponse.json(
@@ -97,38 +100,61 @@ export async function POST(request: NextRequest) {
     // Update user credits
     await updateUserCredits(session.user.id, creditsNeeded)
 
-    // Here you would typically:
-    // 1. Queue the generation job
-    // 2. Call AI service API (Replicate, RunPod, etc.)
-    // 3. Update generation status asynchronously
-    
-    // For now, we'll simulate the process
-    setTimeout(async () => {
-      try {
-        // Simulate generation completion after 30 seconds
-        // In a real implementation, this would be handled by webhooks
-        // or a background job processor
-        
-        // Mock generated image URLs
-        const mockImageUrls = Array.from({ length: variations }, (_, i) => 
-          `https://picsum.photos/512/512?random=${Date.now() + i}`
-        )
-        
-        const mockThumbnailUrls = mockImageUrls.map(url => url.replace('512', '256'))
-        
-        // Update generation with results (this would be in a separate API endpoint)
-        // await updateGenerationStatus(
-        //   generation.id,
-        //   'COMPLETED',
-        //   mockImageUrls,
-        //   mockThumbnailUrls,
-        //   undefined,
-        //   30000 // 30 seconds processing time
-        // )
-      } catch (error) {
-        console.error('Error completing generation:', error)
+    try {
+      // Get AI provider and start real generation
+      console.log(`🎨 Starting generation for model ${model.name} (${model.id})`)
+      const aiProvider = getAIProvider()
+
+      // Parse resolution
+      const [width, height] = resolution.split('x').map(Number)
+
+      // Build generation request
+      const generationRequest = {
+        modelUrl: model.modelUrl!, // We know it's ready so modelUrl exists
+        prompt,
+        negativePrompt,
+        params: {
+          width,
+          height,
+          steps: 20, // Default FLUX steps
+          guidance_scale: 7.5,
+          num_outputs: variations,
+          seed: seed || Math.floor(Math.random() * 1000000)
+        },
+        webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/generation`
       }
-    }, 30000)
+
+      console.log(`🚀 Sending generation request to AI provider...`)
+      const generationResponse = await aiProvider.generateImage(generationRequest)
+      
+      console.log(`✅ Generation started with job ID: ${generationResponse.id}`)
+      
+      // Update generation with job ID and status
+      await prisma.generation.update({
+        where: { id: generation.id },
+        data: {
+          jobId: generationResponse.id,
+          status: 'PROCESSING'
+          // Note: estimatedCompletionTime is a DateTime field, not Int
+          // We'll store completion time estimates in a different way if needed
+        }
+      })
+
+    } catch (generationError) {
+      console.error('❌ Error starting generation:', generationError)
+      
+      // Update generation status to failed
+      await prisma.generation.update({
+        where: { id: generation.id },
+        data: {
+          status: 'FAILED',
+          errorMessage: generationError instanceof Error ? generationError.message : 'Generation failed to start'
+        }
+      })
+      
+      // Refund credits since generation failed
+      await updateUserCredits(session.user.id, -creditsNeeded)
+    }
 
     return NextResponse.json({
       success: true,

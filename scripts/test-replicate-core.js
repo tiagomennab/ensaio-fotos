@@ -8,8 +8,11 @@
 const fs = require('fs');
 const path = require('path');
 
-const BASE_URL = 'http://localhost:3001';
-const REPLICATE_API_TOKEN = 'r8_aKGAAxZyfvl2nur07hL7zZ7C60Mt12v4LzkhG';
+// Load environment variables from .env.local
+require('dotenv').config({ path: path.join(__dirname, '..', '.env.local') });
+
+const BASE_URL = 'http://localhost:3000';
+const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
 
 class ReplicateCoreTest {
   async test1_AccountValidation() {

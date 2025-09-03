@@ -157,7 +157,6 @@ export default async function ModelsPage() {
                   <p className="text-yellow-700 text-sm">
                     {(() => {
                       switch (session.user.plan) {
-                        case 'FREE':
                         case 'STARTER':
                           return 'Upgrade para Premium (3 modelos/mês) ou Gold (10 modelos/mês)'
                         case 'PREMIUM':

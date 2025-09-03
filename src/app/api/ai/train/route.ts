@@ -159,6 +159,7 @@ export async function POST(request: NextRequest) {
     const trainingRequest = {
       modelId: model.id,
       modelName: model.name,
+      name: model.name,
       triggerWord: triggerWord || 'TOK',
       classWord: classWord || model.class.toLowerCase(),
       imageUrls: [...(model.facePhotos || []), ...(model.halfBodyPhotos || []), ...(model.fullBodyPhotos || [])].filter((url): url is string => typeof url === 'string'),

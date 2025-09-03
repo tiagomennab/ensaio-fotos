@@ -19,35 +19,35 @@ export interface RateLimitConfig {
 export const RATE_LIMITS: Record<string, Record<Plan, RateLimitConfig>> = {
   // API calls gerais
   api: {
-    FREE: { requests: 100, windowMs: 15 * 60 * 1000 }, // 100 requests per 15 minutes
+    STARTER: { requests: 100, windowMs: 15 * 60 * 1000 }, // 100 requests per 15 minutes
     PREMIUM: { requests: 500, windowMs: 15 * 60 * 1000 }, // 500 requests per 15 minutes
     GOLD: { requests: 1000, windowMs: 15 * 60 * 1000 } // 1000 requests per 15 minutes
   },
   
   // Upload de arquivos
   upload: {
-    FREE: { requests: 20, windowMs: 60 * 60 * 1000 }, // 20 uploads per hour
+    STARTER: { requests: 20, windowMs: 60 * 60 * 1000 }, // 20 uploads per hour
     PREMIUM: { requests: 100, windowMs: 60 * 60 * 1000 }, // 100 uploads per hour
     GOLD: { requests: 500, windowMs: 60 * 60 * 1000 } // 500 uploads per hour
   },
   
   // Treinamento de modelos
   training: {
-    FREE: { requests: 1, windowMs: 24 * 60 * 60 * 1000 }, // 1 training per day
+    STARTER: { requests: 1, windowMs: 24 * 60 * 60 * 1000 }, // 1 training per day
     PREMIUM: { requests: 5, windowMs: 24 * 60 * 60 * 1000 }, // 5 trainings per day
     GOLD: { requests: 20, windowMs: 24 * 60 * 60 * 1000 } // 20 trainings per day
   },
   
   // Geração de imagens
   generation: {
-    FREE: { requests: 10, windowMs: 60 * 60 * 1000 }, // 10 generations per hour
+    STARTER: { requests: 10, windowMs: 60 * 60 * 1000 }, // 10 generations per hour
     PREMIUM: { requests: 50, windowMs: 60 * 60 * 1000 }, // 50 generations per hour
     GOLD: { requests: 200, windowMs: 60 * 60 * 1000 } // 200 generations per hour
   },
   
   // Login/Authentication
   auth: {
-    FREE: { requests: 5, windowMs: 15 * 60 * 1000 }, // 5 login attempts per 15 minutes
+    STARTER: { requests: 5, windowMs: 15 * 60 * 1000 }, // 5 login attempts per 15 minutes
     PREMIUM: { requests: 5, windowMs: 15 * 60 * 1000 },
     GOLD: { requests: 5, windowMs: 15 * 60 * 1000 }
   }
@@ -57,7 +57,7 @@ export class RateLimiter {
   static async checkLimit(
     userId: string,
     action: string,
-    userPlan: Plan = 'FREE'
+    userPlan: Plan = 'STARTER'
   ): Promise<RateLimit> {
     const config = RATE_LIMITS[action]?.[userPlan]
     
@@ -157,7 +157,7 @@ export class RateLimiter {
       select: { plan: true }
     })
 
-    const userPlan = user?.plan || 'FREE'
+    const userPlan = user?.plan || 'STARTER'
     const actions = action ? [action] : Object.keys(RATE_LIMITS)
     const stats: Record<string, any> = {}
 

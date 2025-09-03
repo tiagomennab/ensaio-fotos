@@ -469,7 +469,7 @@ export default async function DashboardPage() {
           </TabsContent>
 
           <TabsContent value="credits" className="space-y-6">
-            <CreditsOverview userPlan={displayUser?.plan || 'FREE'} />
+            <CreditsOverview userPlan={(displayUser?.plan || 'STARTER') as any} />
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-6">

@@ -18,19 +18,12 @@ export interface CreditUsage {
 }
 
 export const PLAN_LIMITS: Record<Plan, CreditLimits> = {
-  FREE: {
+  STARTER: {
     daily: 10,
     monthly: 100,
     training: 1, // 1 model training per month
     generation: 50, // 50 generations per month
     storage: 1 // 1GB storage
-  },
-  STARTER: {
-    daily: 50,
-    monthly: 500,
-    training: 1, // 1 model training per month
-    generation: 100, // 100 generations per month
-    storage: 5 // 5GB storage
   },
   PREMIUM: {
     daily: 100,
@@ -230,7 +223,7 @@ export class CreditManager {
     )
 
     const used = totalSize + generatedImagesSize
-    const limitGB = PLAN_LIMITS[user?.plan || 'FREE'].storage
+    const limitGB = PLAN_LIMITS[user?.plan || 'STARTER'].storage
     const limit = limitGB * 1024 * 1024 * 1024 // Convert GB to bytes
     const percentage = Math.round((used / limit) * 100)
 

@@ -70,22 +70,36 @@ export async function POST(request: NextRequest) {
 
       case 'succeeded':
         updateData.status = 'READY'
-        updateData.trainingCompletedAt = new Date()
+        updateData.trainedAt = new Date()
+        updateData.progress = 100
         
-        // FLUX training outputs the model directly, not weights
-        if (payload.output) {
-          updateData.modelUrl = payload.output
+        // For FLUX training, the model URL is the destination we created
+        // Get the model destination from the training logs or construct from payload
+        let modelUrl = payload.output
+        
+        // If output is not available, try to construct from webhook data
+        if (!modelUrl && payload.id) {
+          // Try to extract model name from training logs or metadata
+          console.log('🔍 Training completed, payload:', JSON.stringify(payload, null, 2))
+        }
+        
+        if (modelUrl) {
+          updateData.modelUrl = modelUrl
+          console.log('✅ Model URL updated:', modelUrl)
+        } else {
+          console.warn('⚠️ No model URL found in payload, model may not be ready for generation')
         }
         
         // Calculate quality score based on training metrics
         updateData.qualityScore = calculateQualityScore(payload)
         
         // Store FLUX-specific metadata
-        updateData.metadata = {
-          ...model.metadata,
+        updateData.trainingConfig = {
+          ...(typeof model.trainingConfig === 'object' && model.trainingConfig !== null ? model.trainingConfig : {}),
           trainingCompleted: true,
           fluxModel: true,
-          destination: payload.output,
+          trainingId: payload.id,
+          completedAt: new Date().toISOString(),
           version: payload.version
         }
         
@@ -93,7 +107,8 @@ export async function POST(request: NextRequest) {
 
       case 'failed':
         updateData.status = 'ERROR'
-        updateData.trainingCompletedAt = new Date()
+        updateData.trainedAt = new Date()
+        updateData.progress = 0
         
         if (payload.error) {
           updateData.errorMessage = payload.error

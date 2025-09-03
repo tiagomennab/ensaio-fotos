@@ -65,10 +65,7 @@ export default function CreateModelPage() {
   const handleSubmit = async () => {
     setIsSubmitting(true)
     try {
-      // Here we would upload photos and create the model
-      // For now, we'll just simulate the process
-      
-      console.log('Creating model with data:', {
+      console.log('🚀 Creating model with data:', {
         name: modelData.name,
         class: modelData.class,
         facePhotosCount: modelData.facePhotos.length,
@@ -76,12 +73,47 @@ export default function CreateModelPage() {
         fullBodyPhotosCount: modelData.fullBodyPhotos.length
       })
 
-      // Simulate upload time
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // Create FormData with all the photos and model data
+      const formData = new FormData()
+      formData.append('name', modelData.name)
+      formData.append('class', modelData.class)
+      
+      // Add face photos
+      modelData.facePhotos.forEach((photo, index) => {
+        formData.append('facePhotos', photo, `face_${index + 1}_${photo.name}`)
+      })
+      
+      // Add half body photos
+      modelData.halfBodyPhotos.forEach((photo, index) => {
+        formData.append('halfBodyPhotos', photo, `half_${index + 1}_${photo.name}`)
+      })
+      
+      // Add full body photos
+      modelData.fullBodyPhotos.forEach((photo, index) => {
+        formData.append('fullBodyPhotos', photo, `full_${index + 1}_${photo.name}`)
+      })
+
+      console.log('📤 Sending request to /api/models...')
+
+      // Send request to create model
+      const response = await fetch('/api/models', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create model')
+      }
+
+      const result = await response.json()
+      console.log('✅ Model creation response:', result)
       
       router.push('/models?created=true')
     } catch (error) {
-      alert('Erro ao criar modelo')
+      console.error('❌ Error creating model:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
+      alert(`Erro ao criar modelo: ${errorMessage}`)
     } finally {
       setIsSubmitting(false)
     }

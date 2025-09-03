@@ -24,46 +24,228 @@ export class ReplicateProvider extends AIProvider {
     })
   }
 
+  async createModelDestination(modelName: string, description?: string): Promise<string> {
+    try {
+      console.log(`🏗️ Creating model destination: ${AI_CONFIG.replicate.modelNaming.baseUsername}/${modelName}`)
+      
+      const modelData = {
+        owner: AI_CONFIG.replicate.modelNaming.baseUsername,
+        name: modelName,
+        description: description || `Custom AI model: ${modelName}`,
+        visibility: 'private' as const,
+        hardware: 'cpu' as const // Default hardware for model creation
+      }
+      
+      // Use direct HTTP API call since the Replicate client might not support model creation
+      const response = await fetch('https://api.replicate.com/v1/models', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${AI_CONFIG.replicate.apiToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(modelData)
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(`HTTP ${response.status}: ${errorData.detail || response.statusText}`)
+      }
+      
+      const model = await response.json()
+      const destination = `${AI_CONFIG.replicate.modelNaming.baseUsername}/${modelName}`
+      
+      console.log(`✅ Model destination created: ${destination}`)
+      console.log(`🔗 Model URL: ${model.url}`)
+      
+      return destination
+      
+    } catch (error) {
+      console.error('❌ Model creation failed:', error)
+      
+      // Check if model already exists
+      if (error instanceof Error && error.message.includes('already exists')) {
+        const destination = `${AI_CONFIG.replicate.modelNaming.baseUsername}/${modelName}`
+        console.log(`♻️ Model already exists, using: ${destination}`)
+        return destination
+      }
+      
+      throw new AIError(
+        `Failed to create model destination: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'MODEL_CREATION_ERROR'
+      )
+    }
+  }
+
   async startTraining(request: TrainingRequest): Promise<TrainingResponse> {
     try {
-      const input = {
-        input_images: this.createZipFromUrls(request.imageUrls),
-        trigger_word: request.triggerWord,
-        max_train_steps: request.params.steps,
-        learning_rate: request.params.learningRate,
-        batch_size: request.params.batchSize,
-        resolution: request.params.resolution,
-        seed: request.params.seed,
-        autocaption: true,
-        autocaption_suffix: ` a photo of ${request.triggerWord} ${request.classWord}`
+      // Validate request parameters
+      if (!request.name || !request.imageUrls || request.imageUrls.length === 0) {
+        throw new AIError('Invalid training request: missing name or images', 'INVALID_REQUEST')
       }
 
-      const webhookUrl = request.webhookUrl || 
-        `${AI_CONFIG.webhooks.baseUrl}${AI_CONFIG.webhooks.endpoints.training}`
+      if (!AI_CONFIG.replicate.modelNaming.baseUsername) {
+        throw new AIError('Replicate username not configured', 'CONFIG_ERROR')
+      }
 
-      const training = await (this.client.trainings as any).create({
-        version: AI_CONFIG.replicate.models.flux.training,
-        input,
+      // Generate destination model name
+      const modelName = `${request.name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`
+      
+      console.log(`🔍 Debug: modelName = ${modelName}`)
+      console.log(`🔍 Debug: baseUsername = ${AI_CONFIG.replicate.modelNaming.baseUsername}`)
+
+      // Create model destination first
+      const destination = await this.createModelDestination(
+        modelName,
+        `AI model trained from ${request.imageUrls.length} images`
+      )
+
+      console.log(`🚀 Starting FLUX training: ${destination}`)
+
+      const input = {
+        input_images: await this.createZipFromUrls(request.imageUrls),
+        trigger_word: request.triggerWord || 'TOK',
+        steps: request.params.steps || 1000,
+        learning_rate: request.params.learningRate || 0.0004,
+        batch_size: request.params.batchSize || 1,
+        resolution: request.params.resolution || '512,768,1024',
+        lora_rank: 16, // Default as per FLUX trainer
+        autocaption: true,
+        autocaption_suffix: ` a photo of ${request.triggerWord || 'TOK'} ${request.classWord || 'person'}`
+      }
+
+      // Skip webhooks in local development or if no valid HTTPS URL available
+      const webhookUrl = request.webhookUrl
+      const isLocalDev = process.env.NODE_ENV === 'development'
+      const hasValidWebhook = webhookUrl && webhookUrl.startsWith('https://')
+      
+      if (webhookUrl) {
+        console.log(`📡 Webhook URL: ${webhookUrl}`)
+      } else if (isLocalDev) {
+        console.log(`🔄 Development mode: skipping webhook configuration`)
+      }
+
+      // Parse the version string to get model owner and name
+      const versionParts = AI_CONFIG.replicate.models.flux.training.split(':')
+      if (versionParts.length !== 2) {
+        throw new AIError('Invalid FLUX training model version format', 'INVALID_MODEL_VERSION')
+      }
+      const [modelPath, versionId] = versionParts
+      const [modelOwner, trainingModelName] = modelPath.split('/')
+      
+      // Build training options
+      const trainingOptions: any = {
         destination,
-        webhook: webhookUrl,
-        webhook_events_filter: ['start', 'output', 'logs', 'completed']
-      })
+        input
+      }
+      
+      // Only add webhook if we have a valid HTTPS URL
+      if (hasValidWebhook) {
+        trainingOptions.webhook = webhookUrl
+        trainingOptions.webhook_events_filter = ['start', 'output', 'logs', 'completed']
+      }
+      
+      const training = await this.client.trainings.create(
+        modelOwner,
+        trainingModelName,
+        versionId,
+        trainingOptions
+      )
+
+      console.log(`✅ Training created with ID: ${training.id}`)
 
       return {
         id: training.id,
         status: this.mapReplicateStatus(training.status),
         createdAt: training.created_at,
-        estimatedTime: this.estimateFluxTrainingTime(request.imageUrls.length),
+        estimatedTime: this.estimateTrainingTime(request.imageUrls.length, request.params.steps),
         metadata: {
           destination,
-          triggerWord: request.params.triggerWord || 'TOK'
+          triggerWord: request.triggerWord || 'TOK'
         }
       }
 
     } catch (error) {
+      console.error('❌ Training start failed:', error)
+      
+      if (error instanceof AIError) {
+        throw error
+      }
+      
+      // Handle specific Replicate API errors
+      if (error instanceof Error) {
+        // Model creation related errors
+        if (error.message.includes('MODEL_CREATION_ERROR') || error.message.includes('model creation')) {
+          throw new AIError(
+            `Model creation failed: ${error.message}. Please check your Replicate account permissions.`,
+            'MODEL_CREATION_ERROR'
+          )
+        }
+        
+        // Legacy destination errors (should be less common now)
+        if (error.message.includes('destination') && error.message.includes('does not exist')) {
+          throw new AIError(
+            `Model destination error: ${error.message}. The model destination was not created properly.`,
+            'DESTINATION_ERROR'
+          )
+        }
+        
+        // ZIP creation errors
+        if (error.message.includes('zip') || error.message.includes('ZIP')) {
+          throw new AIError(
+            `Training data preparation failed: ${error.message}. Check image files and S3 access.`,
+            'ZIP_CREATION_ERROR'
+          )
+        }
+        
+        // Webhook configuration errors
+        if (error.message.includes('webhook')) {
+          throw new AIError(
+            `Webhook configuration error: ${error.message}`,
+            'WEBHOOK_ERROR'
+          )
+        }
+        
+        // Rate limiting errors
+        if (error.message.includes('rate limit') || error.message.includes('429')) {
+          throw new AIError(
+            `Replicate API rate limit exceeded: ${error.message}. Please try again later.`,
+            'RATE_LIMIT_ERROR'
+          )
+        }
+        
+        // Authentication errors
+        if (error.message.includes('401') || error.message.includes('unauthorized')) {
+          throw new AIError(
+            `Authentication failed: ${error.message}. Check your Replicate API token.`,
+            'AUTH_ERROR'
+          )
+        }
+      }
+      
       throw new AIError(
         `Failed to start FLUX training: ${error instanceof Error ? error.message : 'Unknown error'}`,
         'TRAINING_START_ERROR'
+      )
+    }
+  }
+
+  async getPredictionStatus(predictionId: string): Promise<any> {
+    try {
+      const prediction = await this.client.predictions.get(predictionId)
+      
+      return {
+        id: prediction.id,
+        status: this.mapReplicateStatus(prediction.status),
+        output: prediction.output,
+        error: prediction.error as string | undefined,
+        createdAt: prediction.created_at,
+        completedAt: prediction.completed_at || undefined
+      }
+      
+    } catch (error) {
+      throw new AIError(
+        `Failed to get prediction status: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'PREDICTION_STATUS_ERROR'
       )
     }
   }
@@ -72,21 +254,19 @@ export class ReplicateProvider extends AIProvider {
     try {
       const training = await this.client.trainings.get(trainingId)
 
+      const extractedUrl = training.output ? this.extractModelUrl(training.output) : undefined
+      
       return {
         id: training.id,
         status: this.mapReplicateStatus(training.status),
-        model: training.output ? {
-          url: training.output,
-          name: this.extractModelNameFromDestination(training.output)
+        model: extractedUrl ? {
+          url: extractedUrl,
+          name: this.extractModelNameFromDestination(extractedUrl)
         } : undefined,
         logs: training.logs ? training.logs.split('\n') : undefined,
         error: training.error as string | undefined,
         createdAt: training.created_at,
-        completedAt: training.completed_at || undefined,
-        metadata: {
-          destination: training.output,
-          version: training.version
-        }
+        completedAt: training.completed_at || undefined
       }
 
     } catch (error) {
@@ -122,15 +302,32 @@ export class ReplicateProvider extends AIProvider {
         input.negative_prompt = request.negativePrompt
       }
 
-      const webhookUrl = request.webhookUrl || 
-        `${AI_CONFIG.webhooks.baseUrl}${AI_CONFIG.webhooks.endpoints.generation}`
+      const webhookUrl = request.webhookUrl
+      const hasValidWebhook = webhookUrl && webhookUrl.startsWith('https://')
+      
+      // Build prediction options
+      const predictionOptions: any = {
+        input
+      }
+      
+      // If we have a custom model URL (trained model), use it as version
+      if (request.modelUrl) {
+        // For FLUX trained models, the modelUrl is the version identifier
+        predictionOptions.version = request.modelUrl
+        console.log('🎨 Using custom trained model version:', request.modelUrl)
+      } else {
+        // Use default FLUX generation model
+        predictionOptions.version = AI_CONFIG.replicate.models.flux.generation
+        console.log('🎨 Using default FLUX model')
+      }
+      
+      // Only add webhook if we have a valid HTTPS URL
+      if (hasValidWebhook) {
+        predictionOptions.webhook = webhookUrl
+        predictionOptions.webhook_events_filter = ['start', 'output', 'logs', 'completed']
+      }
 
-      const prediction = await this.client.predictions.create({
-        version: request.modelUrl || AI_CONFIG.replicate.models.flux.generation,
-        input,
-        webhook: webhookUrl,
-        webhook_events_filter: ['start', 'output', 'logs', 'completed']
-      })
+      const prediction = await this.client.predictions.create(predictionOptions)
 
       return {
         id: prediction.id,
@@ -275,16 +472,27 @@ export class ReplicateProvider extends AIProvider {
     }
   }
 
-  private createZipFromUrls(urls: string[]): string {
-    // In a real implementation, you would:
-    // 1. Download all images from URLs
-    // 2. Create a ZIP file
-    // 3. Upload the ZIP to a temporary storage
-    // 4. Return the ZIP URL
+  private async createZipFromUrls(urls: string[]): Promise<string> {
+    const { createZipFromLocalFiles, validateImageFiles } = await import('../zip-creator')
     
-    // For now, return a placeholder URL
-    // This should be implemented based on your storage provider
-    return 'https://example.com/training-images.zip'
+    // Validate files exist
+    const { valid, missing } = await validateImageFiles(urls)
+    
+    if (missing.length > 0) {
+      console.warn(`⚠️ Missing ${missing.length} training files:`, missing.slice(0, 3))
+    }
+    
+    if (valid.length === 0) {
+      throw new Error('No valid training images found')
+    }
+    
+    console.log(`✅ Found ${valid.length}/${urls.length} valid training files`)
+    
+    // Extract model ID from the first URL path
+    const modelId = urls[0]?.split('/').find(part => part.match(/^[a-f0-9-]+$/)) || 'unknown'
+    
+    // Create ZIP from local files
+    return await createZipFromLocalFiles(valid, `training-${modelId}`, modelId)
   }
 
   private estimateTrainingTime(imageCount: number, steps: number): number {
@@ -413,6 +621,66 @@ export class ReplicateProvider extends AIProvider {
       case 'FREE':
       default:
         return 80 // Standard quality
+    }
+  }
+
+  private extractModelUrl(output: any): string | undefined {
+    // Extract model URL from Replicate training output
+    if (!output) {
+      return undefined
+    }
+    
+    // If it's already a string, return as is
+    if (typeof output === 'string') {
+      return output
+    }
+    
+    // Handle complex object response from FLUX training
+    if (typeof output === 'object') {
+      // For FLUX models, prefer the version string as it's used for generation
+      if (output.version && typeof output.version === 'string') {
+        return output.version
+      }
+      
+      // Fallback to weights URL if version not available
+      if (output.weights && typeof output.weights === 'string') {
+        return output.weights
+      }
+      
+      // Handle other possible formats
+      if (output.url && typeof output.url === 'string') {
+        return output.url
+      }
+    }
+    
+    console.warn('Unable to extract model URL from output:', output)
+    return undefined
+  }
+
+  private extractModelNameFromDestination(destination?: string): string {
+    // Extract model name from destination URL or output
+    if (!destination || typeof destination !== 'string') {
+      return 'Unknown Model'
+    }
+    
+    try {
+      // Handle different destination formats
+      // Format: username/model-name or https://replicate.com/username/model-name
+      const parts = destination.split('/')
+      const modelPart = parts[parts.length - 1] || parts[parts.length - 2]
+      
+      if (!modelPart) {
+        return 'Custom Model'
+      }
+      
+      // Clean up the model name
+      return modelPart
+        .replace(/-/g, ' ')
+        .replace(/\b\w/g, l => l.toUpperCase())
+        .trim() || 'Custom Model'
+    } catch (error) {
+      console.warn('Error extracting model name from destination:', destination, error)
+      return 'Custom Model'
     }
   }
 }

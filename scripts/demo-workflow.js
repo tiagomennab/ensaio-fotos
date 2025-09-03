@@ -5,7 +5,7 @@
  * Shows how to test the AI model training workflow manually
  */
 
-const REPLICATE_API_TOKEN = 'r8_aKGAAxZyfvl2nur07hL7zZ7C60Mt12v4LzkhG';
+const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN || 'your-replicate-api-token-here';
 
 console.log(`
 🚀 REPLICATE INTEGRATION DEMO

@@ -11,7 +11,7 @@ const FormData = require('form-data');
 
 // Test configuration
 const BASE_URL = 'http://localhost:3001';
-const REPLICATE_API_TOKEN = 'r8_aKGAAxZyfvl2nur07hL7zZ7C60Mt12v4LzkhG';
+const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN || 'your-replicate-api-token-here';
 
 // Test utilities
 async function makeRequest(endpoint, method = 'GET', body = null, headers = {}) {

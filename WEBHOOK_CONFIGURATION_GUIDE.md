@@ -31,7 +31,7 @@ Este guia explica como configurar completamente os webhooks para a aplicação E
 
 ```env
 # Token da API (já configurado)
-REPLICATE_API_TOKEN="r8_aKGAAxZyfvl2nur07hL7zZ7C60Mt12v4LzkhG"
+REPLICATE_API_TOKEN="your-replicate-api-token-here"
 
 # Secret para validação de webhooks
 REPLICATE_WEBHOOK_SECRET="your-secure-webhook-secret-here"

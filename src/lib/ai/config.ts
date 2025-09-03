@@ -17,7 +17,9 @@ export const AI_CONFIG = {
       // FLUX.1 for training and generation - Updated per Replicate API docs
       flux: {
         training: 'ostris/flux-dev-lora-trainer:26dce37af90b9d997eeb970d92e47de3064d46c300504ae376c75bef6a9022d2',
-        generation: 'black-forest-labs/flux-schnell:c846a69991daf4c0e5d016514849d14ee5b2e6846ce6b9d6f21369e564cfe51e'
+        generation: 'black-forest-labs/flux-schnell:c846a69991daf4c0e5d016514849d14ee5b2e6846ce6b9d6f21369e564cfe51e', // Schnell - fast generation
+        dev: 'black-forest-labs/flux-dev:8beff3369e81422112d93b89ca01426147de542cd4684c244b673b105188fe5f', // Dev - higher quality
+        pro: 'black-forest-labs/flux-pro:5de114640536c3073e8f2b9bb7e7085da94f6e22e5b5169af877e4b92024616e' // Pro - professional quality
       },
       // Stable Diffusion models
       sdxl: {
@@ -105,7 +107,7 @@ export const AI_CONFIG = {
   
   // Webhook Configuration
   webhooks: {
-    baseUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+    baseUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://webhook.site/unique-id',
     endpoints: {
       training: '/api/webhooks/training',
       generation: '/api/webhooks/generation'

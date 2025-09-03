@@ -14,7 +14,8 @@ import {
   Clock,
   CheckCircle,
   User,
-  Users
+  Users,
+  RefreshCw
 } from 'lucide-react'
 import Link from 'next/link'
 import { AIModel } from '@/types'
@@ -28,6 +29,7 @@ interface ModelCardProps {
 
 export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
   const [showActions, setShowActions] = useState(false)
 
   const getStatusIcon = () => {
@@ -98,6 +100,28 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
     }
   }
 
+  const handleSyncStatus = async () => {
+    setIsSyncing(true)
+    try {
+      const response = await fetch(`/api/models/${model.id}/sync-status`, {
+        method: 'POST',
+      })
+
+      const result = await response.json()
+      
+      if (result.success) {
+        // Refresh the page to show updated status
+        window.location.reload()
+      } else {
+        alert(`Failed to sync status: ${result.error || result.message}`)
+      }
+    } catch (error) {
+      alert('Error syncing model status')
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   return (
     <Card className="relative overflow-hidden hover:shadow-lg transition-shadow">
       {/* Header with model info */}
@@ -147,6 +171,17 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
                       <Play className="w-4 h-4 mr-2" />
                       Generate Photos
                     </Link>
+                  )}
+                  
+                  {model.status === 'TRAINING' && (
+                    <button
+                      onClick={handleSyncStatus}
+                      disabled={isSyncing}
+                      className="flex items-center px-4 py-2 text-sm hover:bg-gray-50 w-full text-left"
+                    >
+                      <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+                      {isSyncing ? 'Syncing...' : 'Sync Status'}
+                    </button>
                   )}
                   
                   <button

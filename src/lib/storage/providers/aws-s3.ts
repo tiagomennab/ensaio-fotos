@@ -1,4 +1,5 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { StorageProvider, UploadResult, UploadOptions, FileValidation, DeleteResult, StorageError } from '../base'
 import { STORAGE_CONFIG, UPLOAD_PATHS } from '../config'
 import sharp from 'sharp'
@@ -136,6 +137,29 @@ export class AWSS3Provider extends StorageProvider {
       return `${this.cloudFrontUrl}/${key}`
     }
     return `https://${this.bucket}.s3.${STORAGE_CONFIG.aws.region}.amazonaws.com/${key}`
+  }
+
+  /**
+   * Generate a pre-signed URL for accessing private S3 objects
+   * @param key S3 object key
+   * @param expiresIn Expiration time in seconds (default: 1 hour)
+   * @returns Pre-signed URL that allows temporary access
+   */
+  async getSignedUrl(key: string, expiresIn: number = 3600): Promise<string> {
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucket,
+        Key: key
+      })
+      
+      const signedUrl = await getSignedUrl(this.s3Client, command, { expiresIn })
+      return signedUrl
+    } catch (error) {
+      throw new StorageError(
+        `Failed to generate signed URL: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'SIGNED_URL_ERROR'
+      )
+    }
   }
 
   validateFile(file: File): FileValidation {

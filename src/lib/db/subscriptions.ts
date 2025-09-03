@@ -39,7 +39,7 @@ export async function updateSubscriptionStatus(
 
   // If subscription is cancelled or expired, downgrade to FREE
   if (['CANCELLED', 'EXPIRED', 'OVERDUE'].includes(status)) {
-    updateData.plan = Plan.FREE
+    updateData.plan = Plan.STARTER
     updateData.creditsLimit = 10
   }
 
@@ -54,7 +54,7 @@ export async function cancelSubscription(userId: string) {
     where: { id: userId },
     data: {
       subscriptionStatus: 'CANCELLED',
-      plan: Plan.FREE,
+      plan: Plan.STARTER,
       creditsLimit: 10
     }
   })
@@ -96,7 +96,7 @@ export async function updateUserAsaasCustomerId(userId: string, asaasCustomerId:
 
 function getCreditsLimitForPlan(plan: Plan): number {
   switch (plan) {
-    case Plan.FREE:
+    case Plan.STARTER:
       return 10
     case Plan.PREMIUM:
       return 100

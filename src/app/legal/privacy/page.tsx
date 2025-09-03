@@ -352,7 +352,7 @@ export default function PrivacyPage() {
               <ul className="list-disc pl-6 space-y-2">
                 <li>Email para todos os usuários cadastrados</li>
                 <li>Notificação destacada em nossa plataforma</li>
-                <li>Atualização da data de "última modificação"</li>
+                <li>Atualização da data de &quot;última modificação&quot;</li>
               </ul>
               <p>
                 Recomendamos revisar esta política regularmente para se manter informado sobre como protegemos seus dados.

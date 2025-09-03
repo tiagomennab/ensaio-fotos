@@ -7,7 +7,7 @@ interface RetryOptions {
   backoffMultiplier?: number
 }
 
-const DEFAULT_RETRY_OPTIONS: RetryOptions = {
+const DEFAULT_RETRY_OPTIONS: Required<RetryOptions> = {
   maxRetries: 3,
   baseDelay: 1000, // 1 second
   maxDelay: 10000, // 10 seconds
@@ -29,7 +29,7 @@ export async function withRetry<T>(
 
   let lastError: any
   
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+  for (let attempt = 0; attempt <= maxRetries!; attempt++) {
     try {
       return await operation()
     } catch (error) {
@@ -55,19 +55,19 @@ export async function withRetry<T>(
       
       // Calculate delay with exponential backoff and jitter
       const delay = Math.min(
-        baseDelay * Math.pow(backoffMultiplier, attempt),
-        maxDelay
+        baseDelay! * Math.pow(backoffMultiplier!, attempt),
+        maxDelay!
       )
       
       // Add jitter to prevent thundering herd
       const jitteredDelay = delay + Math.random() * 1000
       
       console.warn(
-        `Database operation failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${Math.round(jitteredDelay)}ms:`,
-        error.message
+        `Database operation failed (attempt ${attempt + 1}/${maxRetries! + 1}), retrying in ${Math.round(jitteredDelay)}ms:`,
+        (error as Error).message
       )
       
-      await new Promise(resolve => setTimeout(resolve, jitteredDelay))
+      await new Promise(resolve => setTimeout(resolve, jitteredDelay!))
     }
   }
   
@@ -122,7 +122,7 @@ export async function withFallback<T>(
     return await withRetry(operation)
   } catch (error) {
     if (isConnectionError(error)) {
-      console.warn('Database connection issue, using fallback value:', error.message)
+      console.warn('Database connection issue, using fallback value:', (error as Error).message)
       return fallbackValue
     }
     throw error

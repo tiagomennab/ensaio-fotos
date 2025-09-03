@@ -1,6 +1,7 @@
 export interface TrainingRequest {
   modelId: string
   modelName: string
+  name: string
   triggerWord: string
   classWord: string
   imageUrls: string[]
@@ -29,6 +30,7 @@ export interface TrainingResponse {
   estimatedTime?: number
   createdAt: string
   completedAt?: string
+  metadata?: any
 }
 
 export interface GenerationRequest {
@@ -73,6 +75,13 @@ export interface WebhookPayload {
   error?: string
   logs?: string[]
   completed_at?: string
+  version?: string
+  model?: {
+    url?: {
+      version?: string
+      weights?: string
+    } | string
+  }
   metrics?: {
     total_time?: number
     prediction_time?: number
@@ -93,6 +102,14 @@ export abstract class AIProvider {
   abstract cancelGeneration(generationId: string): Promise<boolean>
   
   abstract validateModel(modelUrl: string): Promise<boolean>
+  
+  // Optional: Get prediction status for any job (training or generation)
+  getPredictionStatus?(jobId: string): Promise<{
+    status: 'starting' | 'processing' | 'succeeded' | 'failed' | 'canceled'
+    output?: any
+    error?: string
+    logs?: string[]
+  }>
   
   // Optional: Get available models
   getAvailableModels?(): Promise<Array<{

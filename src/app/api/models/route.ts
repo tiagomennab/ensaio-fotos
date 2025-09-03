@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { getModelsByUserId, canUserCreateModel } from '@/lib/db/models'
+import { authOptions } from '@/lib/auth'
+import { getModelsByUserId, canUserCreateModel, createAIModel, updateModelStatus } from '@/lib/db/models'
+import { getAIProvider } from '@/lib/ai'
+import { getStorageProvider } from '@/lib/storage'
+import { AIError } from '@/lib/ai/base'
+import { prisma } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession()
+    const session = await getServerSession(authOptions)
     
     if (!session?.user) {
       return NextResponse.json(
@@ -47,31 +52,86 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Helper function to save photos using storage provider
+async function savePhotosToStorage(photos: any[], category: string, modelId: string): Promise<string[]> {
+  console.log(`💾 Saving ${photos.length} ${category} photos for model ${modelId}...`)
+  
+  const storage = getStorageProvider()
+  const savedUrls: string[] = []
+
+  for (let i = 0; i < photos.length; i++) {
+    const photo = photos[i]
+    
+    console.log(`📤 Uploading ${category} photo ${i + 1}/${photos.length}: ${photo.name}`)
+    
+    try {
+      // Create File object from photo data if needed
+      // Note: This assumes photos come as File objects from FormData
+      // If they come as base64 or other format, we'd need to convert
+      
+      const filename = `training/${modelId}/${category}/${category}_${i + 1}_${photo.name}`
+      
+      const uploadResult = await storage.upload(photo, filename, {
+        folder: `training/${modelId}`,
+        makePublic: true, // Important: needs to be public for Replicate access
+        quality: 90
+      })
+      
+      console.log(`✅ Photo uploaded: ${uploadResult.url}`)
+      savedUrls.push(uploadResult.url)
+      
+    } catch (uploadError) {
+      console.error(`❌ Failed to upload ${photo.name}:`, uploadError)
+      const errorMessage = uploadError instanceof Error ? uploadError.message : 'Unknown upload error'
+      throw new Error(`Failed to upload photo ${photo.name}: ${errorMessage}`)
+    }
+  }
+
+  console.log(`✅ All ${category} photos saved successfully`)
+  return savedUrls
+}
+
 export async function POST(request: NextRequest) {
+  console.log('🚀 Starting model creation process...')
+  
   try {
-    const session = await getServerSession()
+    const session = await getServerSession(authOptions)
     
     if (!session?.user) {
+      console.log('❌ Unauthorized access attempt')
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
 
+    console.log(`👤 User ${session.user.id} creating model...`)
+
     // Check if user can create more models
     const canCreate = await canUserCreateModel(session.user.id)
     if (!canCreate) {
+      console.log('❌ Model limit reached for user plan')
       return NextResponse.json(
         { error: 'Model limit reached for your plan' },
         { status: 403 }
       )
     }
 
-    const body = await request.json()
-    const { name, class: modelClass, facePhotos, halfBodyPhotos, fullBodyPhotos } = body
+    const formData = await request.formData()
+    const name = formData.get('name') as string
+    const modelClass = formData.get('class') as string
+    
+    // Extract photos from FormData
+    const facePhotos = formData.getAll('facePhotos') as File[]
+    const halfBodyPhotos = formData.getAll('halfBodyPhotos') as File[]
+    const fullBodyPhotos = formData.getAll('fullBodyPhotos') as File[]
+
+    console.log(`📋 Model data: name=${name}, class=${modelClass}`)
+    console.log(`📸 Photos: face=${facePhotos?.length}, half=${halfBodyPhotos?.length}, full=${fullBodyPhotos?.length}`)
 
     // Validate required fields
     if (!name || !modelClass || !facePhotos || !halfBodyPhotos || !fullBodyPhotos) {
+      console.log('❌ Missing required fields')
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -80,6 +140,7 @@ export async function POST(request: NextRequest) {
 
     // Validate photo counts
     if (facePhotos.length < 4 || facePhotos.length > 8) {
+      console.log(`❌ Invalid face photos count: ${facePhotos.length}`)
       return NextResponse.json(
         { error: 'Face photos must be between 4-8 images' },
         { status: 400 }
@@ -87,6 +148,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (halfBodyPhotos.length < 5 || halfBodyPhotos.length > 10) {
+      console.log(`❌ Invalid half body photos count: ${halfBodyPhotos.length}`)
       return NextResponse.json(
         { error: 'Half body photos must be between 5-10 images' },
         { status: 400 }
@@ -94,27 +156,136 @@ export async function POST(request: NextRequest) {
     }
 
     if (fullBodyPhotos.length < 10 || fullBodyPhotos.length > 15) {
+      console.log(`❌ Invalid full body photos count: ${fullBodyPhotos.length}`)
       return NextResponse.json(
         { error: 'Full body photos must be between 10-15 images' },
         { status: 400 }
       )
     }
 
-    // Here you would typically:
-    // 1. Save photos to storage (S3/Cloudinary)
-    // 2. Create model in database
-    // 3. Queue training job
-    // 4. Return model info
+    // Step 1: Convert File objects to serializable format for database
+    console.log('📝 Preparing photo metadata for database...')
+    const facePhotoData = facePhotos.map((file: File, index: number) => ({
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      order: index + 1
+    }))
+    
+    const halfBodyPhotoData = halfBodyPhotos.map((file: File, index: number) => ({
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      order: index + 1
+    }))
+    
+    const fullBodyPhotoData = fullBodyPhotos.map((file: File, index: number) => ({
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      order: index + 1
+    }))
 
-    // For now, we'll just return a placeholder response
-    return NextResponse.json({
-      success: true,
-      message: 'Model creation started',
-      modelId: 'placeholder-id'
+    // Step 2: Create model in database with photo metadata
+    console.log('💾 Creating model in database...')
+    const model = await createAIModel({
+      name,
+      class: modelClass as any,
+      userId: session.user.id,
+      facePhotos: facePhotoData,
+      halfBodyPhotos: halfBodyPhotoData,
+      fullBodyPhotos: fullBodyPhotoData
     })
 
+    console.log(`✅ Model created in database with ID: ${model.id}`)
+
+    try {
+      // Step 3: Save photos to storage (using File objects)
+      console.log('💾 Saving photos to storage...')
+      const facePaths = await savePhotosToStorage(facePhotos, 'face', model.id)
+      const halfBodyPaths = await savePhotosToStorage(halfBodyPhotos, 'half-body', model.id)
+      const fullBodyPaths = await savePhotosToStorage(fullBodyPhotos, 'full-body', model.id)
+
+      console.log(`✅ Photos saved: ${facePaths.length + halfBodyPaths.length + fullBodyPaths.length} files`)
+
+      // Step 3: Prepare training data
+      console.log('🔄 Updating model status to PROCESSING...')
+      await updateModelStatus(model.id, 'PROCESSING', 10)
+
+      // Step 4: Get AI provider and start training
+      console.log('🤖 Getting AI provider...')
+      const aiProvider = getAIProvider()
+
+      // Create training request
+      const trainingRequest = {
+        modelId: model.id,
+        modelName: model.name,
+        name: model.name,
+        class: model.class as any,
+        imageUrls: [...facePaths, ...halfBodyPaths, ...fullBodyPaths],
+        triggerWord: `${model.name.toLowerCase().replace(/\s+/g, '')}_person`,
+        classWord: model.class.toLowerCase(),
+        params: {
+          steps: 1000,
+          resolution: 1024,
+          learningRate: 1e-4,
+          batchSize: 1,
+          seed: Math.floor(Math.random() * 1000000)
+        },
+        webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/training`
+      }
+
+      console.log('🚀 Starting AI training...')
+      const trainingResponse = await aiProvider.startTraining(trainingRequest)
+      
+      console.log(`✅ Training started with ID: ${trainingResponse.id}`)
+
+      // Step 5: Update model with training info and save training ID
+      await prisma.aIModel.update({
+        where: { id: model.id },
+        data: {
+          status: 'TRAINING',
+          progress: 20,
+          trainingConfig: {
+            trainingId: trainingResponse.id,
+            fluxModel: true,
+            startedAt: new Date().toISOString(),
+            estimatedTime: trainingResponse.estimatedTime,
+            provider: 'replicate'
+          }
+        }
+      })
+
+      console.log('🎉 Model creation process completed successfully!')
+
+      return NextResponse.json({
+        success: true,
+        message: 'Model creation started successfully',
+        modelId: model.id,
+        trainingId: trainingResponse.id,
+        estimatedTime: trainingResponse.estimatedTime,
+        status: 'TRAINING'
+      })
+
+    } catch (trainingError: any) {
+      console.error('❌ Error during training setup:', trainingError)
+      
+      // Update model status to failed
+      await updateModelStatus(model.id, 'ERROR', 0, trainingError.message)
+      
+      throw trainingError
+    }
+
   } catch (error: any) {
-    console.error('Error creating model:', error)
+    console.error('❌ Error creating model:', error)
+    
+    if (error instanceof AIError) {
+      return NextResponse.json(
+        { error: `AI Provider Error: ${error.message}` },
+        { status: 500 }
+      )
+    }
+    
     return NextResponse.json(
       { error: 'Failed to create model' },
       { status: 500 }

@@ -144,6 +144,46 @@ export function GenerationInterface({
     setPrompt(selectedPrompt)
   }
 
+  const handleManualSync = async (generationId: string) => {
+    try {
+      const response = await fetch(`/api/generations/${generationId}/sync`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        // Refresh the current generation status
+        const statusResponse = await fetch(`/api/generations/${generationId}`)
+        const statusData = await statusResponse.json()
+
+        if (statusData.generation) {
+          setCurrentGeneration(statusData.generation)
+          
+          // If completed, add to results gallery
+          if (statusData.generation.status === 'COMPLETED') {
+            setGenerationResults(prev => {
+              // Avoid duplicates
+              const exists = prev.find(g => g.id === statusData.generation.id)
+              if (!exists) {
+                return [statusData.generation, ...prev]
+              }
+              return prev
+            })
+          }
+        }
+      } else {
+        alert(data.error || 'Failed to sync generation status')
+      }
+    } catch (error) {
+      console.error('Error syncing generation:', error)
+      alert('Error syncing generation status')
+    }
+  }
+
   const creditsRemaining = user.creditsLimit - user.creditsUsed
   const canGenerate = prompt.trim() && canUseCredits && !isGenerating && creditsRemaining >= settings.variations
 
@@ -300,17 +340,30 @@ export function GenerationInterface({
                     {currentGeneration.prompt}
                   </p>
                 </div>
-                <div className="text-right">
-                  {currentGeneration.status === 'PROCESSING' ? (
-                    <div className="flex items-center text-blue-600">
-                      <Clock className="w-4 h-4 mr-1 animate-pulse" />
-                      <span className="text-sm">~30 seconds</span>
-                    </div>
-                  ) : (
-                    <Badge variant="default">
-                      {currentGeneration.imageUrls?.length || 0} images
-                    </Badge>
+                <div className="flex items-center space-x-2">
+                  {currentGeneration.status === 'PROCESSING' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleManualSync(currentGeneration.id)}
+                      className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                    >
+                      <RefreshCw className="w-3 h-3 mr-1" />
+                      Sync
+                    </Button>
                   )}
+                  <div className="text-right">
+                    {currentGeneration.status === 'PROCESSING' ? (
+                      <div className="flex items-center text-blue-600">
+                        <Clock className="w-4 h-4 mr-1 animate-pulse" />
+                        <span className="text-sm">~30 seconds</span>
+                      </div>
+                    ) : (
+                      <Badge variant="default">
+                        {currentGeneration.imageUrls?.length || 0} images
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>

@@ -167,25 +167,29 @@ export interface SubscriptionLimits {
   generations: number
   resolution: string
   features: string[]
+  storage: number
 }
 
 export const PLAN_LIMITS: Record<Plan, SubscriptionLimits> = {
-  FREE: {
+  STARTER: {
     models: 1,
     generations: 10,
     resolution: '512x512',
-    features: ['watermark']
+    features: ['watermark'],
+    storage: 1
   },
   PREMIUM: {
     models: 3,
     generations: 100,
     resolution: '1024x1024',
-    features: ['no_watermark', 'premium_packages']
+    features: ['no_watermark', 'premium_packages'],
+    storage: 5
   },
   GOLD: {
     models: -1, // unlimited
     generations: 500,
     resolution: '2048x2048',
-    features: ['no_watermark', 'premium_packages', 'api_access', 'priority_support']
+    features: ['no_watermark', 'premium_packages', 'api_access', 'priority_support'],
+    storage: 20
   }
 }

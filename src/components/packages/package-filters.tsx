@@ -184,13 +184,12 @@ export function PackageFilters({ onClose }: PackageFiltersProps) {
               <Button
                 key={tag}
                 variant={selectedTags.includes(tag) ? "default" : "outline"}
-                className={selectedTags.includes(tag) 
+                className={`text-xs ${selectedTags.includes(tag) 
                   ? "bg-blue-600 text-white hover:bg-blue-700" 
                   : "border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white"
-                }
+                }`}
                 size="sm"
                 onClick={() => toggleTag(tag)}
-                className="text-xs"
               >
                 #{tag}
               </Button>

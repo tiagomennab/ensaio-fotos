@@ -269,7 +269,7 @@ function PricingPageContent() {
     if (mounted && session?.user && !isRequired && !isNewUser) {
       // Check if user has an active plan - if yes, redirect to dashboard
       const userPlan = session.user.plan
-      if (userPlan && userPlan !== 'FREE' && userPlan !== 'TRIAL') {
+      if (userPlan && userPlan !== 'STARTER') {
         router.push('/dashboard')
         return
       }

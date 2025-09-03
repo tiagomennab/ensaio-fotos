@@ -77,7 +77,7 @@ async function main() {
   // Test Replicate API directly
   console.log('\n🌐 Testing Replicate API directly...');
   
-  const REPLICATE_TOKEN = 'r8_aKGAAxZyfvl2nur07hL7zZ7C60Mt12v4LzkhG';
+  const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN || 'your-replicate-api-token-here';
   
   try {
     const response = await fetch('https://api.replicate.com/v1/account', {
