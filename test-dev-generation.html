@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Dev Generation</title>
+</head>
+<body>
+    <h1>Test Dev Generation API</h1>
+    <button onclick="testGeneration()">Test Generation (No Webhook)</button>
+    <div id="result"></div>
+
+    <script>
+        async function testGeneration() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                // First get a model ID - let's try to find one
+                const modelsResponse = await fetch('/api/models');
+                const models = await modelsResponse.json();
+                
+                console.log('Available models:', models);
+                
+                if (!models.items || models.items.length === 0) {
+                    resultDiv.innerHTML = 'No models found. Please create a model first.';
+                    return;
+                }
+                
+                const model = models.items.find(m => m.status === 'COMPLETED');
+                if (!model) {
+                    resultDiv.innerHTML = 'No completed models found.';
+                    return;
+                }
+                
+                console.log('Using model:', model);
+                
+                // Test generation
+                const response = await fetch('/api/ai/generate-dev', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        modelId: model.id,
+                        prompt: 'A simple test image of a beautiful landscape',
+                        steps: 20,
+                        guidance_scale: 7.5,
+                        output_quality: 95
+                    })
+                });
+                
+                const result = await response.json();
+                console.log('Generation result:', result);
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <h3>✅ Generation Started Successfully!</h3>
+                        <p><strong>Generation ID:</strong> ${result.generation.id}</p>
+                        <p><strong>Job ID:</strong> ${result.generation.jobId}</p>
+                        <p><strong>Status:</strong> ${result.generation.status}</p>
+                        <p><strong>Model:</strong> ${result.generation.model}</p>
+                        <p><strong>Message:</strong> ${result.message}</p>
+                        <button onclick="checkStatus('${result.generation.jobId}', '${result.generation.id}')">Check Status</button>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <h3>❌ Generation Failed</h3>
+                        <p><strong>Error:</strong> ${result.error}</p>
+                        <p><strong>Details:</strong> ${result.details || 'N/A'}</p>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('Test error:', error);
+                resultDiv.innerHTML = `<h3>❌ Test Failed</h3><p>${error.message}</p>`;
+            }
+        }
+        
+        async function checkStatus(jobId, generationId) {
+            console.log('Checking status for job:', jobId);
+            
+            try {
+                const response = await fetch('/api/poll/generations', {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                console.log('Polling result:', result);
+                
+                const statusDiv = document.createElement('div');
+                statusDiv.innerHTML = `
+                    <h4>Polling Result:</h4>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                `;
+                document.getElementById('result').appendChild(statusDiv);
+                
+            } catch (error) {
+                console.error('Status check error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

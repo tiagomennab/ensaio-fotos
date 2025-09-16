@@ -1,0 +1,9 @@
+{
+  "id": "2w0z33mrbhrmc0cs7jksktt0d4",
+  "status": "succeeded",
+  "output": ["https://replicate.delivery/xezq/rKQ3REO7XQJXJNkeOzTfelDEwb8mJxtMThX9ReCFGJdGncRVB/out-0.png"],
+  "metrics": {
+    "predict_time": 8.907918906
+  },
+  "completed_at": "2025-09-12T06:40:49.542391073Z"
+}

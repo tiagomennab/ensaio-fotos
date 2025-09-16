@@ -6,7 +6,10 @@
       "Bash(npm install)",
       "Bash(npm install:*)",
       "Bash(npm run dev:*)",
-      "Bash(npx prisma generate:*)"
+      "Bash(npx prisma generate:*)",
+      "Bash(npx tsc:*)",
+      "Bash(taskkill:*)",
+      "Bash(npx prisma db push:*)"
     ],
     "deny": [],
     "ask": []
@@ -24,15 +27,6 @@
       }
     ],
     "PreToolUse": [
-      {
-        "matcher": "^(?!mcp__voice-hooks__).*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "curl -s -X POST \"http://localhost:${MCP_VOICE_HOOKS_PORT:-5111}/api/hooks/pre-tool\" || echo '{\"decision\": \"approve\", \"reason\": \"voice-hooks unavailable\"}'"
-          }
-        ]
-      },
       {
         "matcher": "^mcp__voice-hooks__speak$",
         "hooks": [
@@ -54,7 +48,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "^(?!mcp__voice-hooks__|ExitPlanMode).*",
+        "matcher": "^(?!mcp__voice-hooks__).*",
         "hooks": [
           {
             "type": "command",
