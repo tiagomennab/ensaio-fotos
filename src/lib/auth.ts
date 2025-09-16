@@ -67,14 +67,13 @@ export const authOptions: NextAuthOptions = {
         token.plan = user.plan
         token.creditsUsed = user.creditsUsed
         token.creditsLimit = user.creditsLimit
-        // Expose Asaas customer id (temporarily stored in stripeCustomerId field)
-        // and subscription info to the session token
+        // Subscription fields commented out for testing - no payment system active
         // @ts-ignore dynamic fields on token
-        token.stripeCustomerId = (user as any).stripeCustomerId || null
+        token.stripeCustomerId = null // (user as any).stripeCustomerId || null
         // @ts-ignore
-        token.subscriptionId = (user as any).subscriptionId || null
+        token.subscriptionId = null // (user as any).subscriptionId || null
         // @ts-ignore
-        token.subscriptionStatus = (user as any).subscriptionStatus || null
+        token.subscriptionStatus = null // (user as any).subscriptionStatus || null
         
         // Update lastLoginAt when user signs in (with error handling)
         try {
@@ -131,12 +130,12 @@ export const authOptions: NextAuthOptions = {
         session.user.plan = token.plan as Plan
         session.user.creditsUsed = token.creditsUsed as number
         session.user.creditsLimit = token.creditsLimit as number
-        // @ts-ignore surfaced billing fields
-        session.user.stripeCustomerId = (token as any).stripeCustomerId || null
+        // @ts-ignore surfaced billing fields - commented for testing
+        session.user.stripeCustomerId = null // (token as any).stripeCustomerId || null
         // @ts-ignore
-        session.user.subscriptionId = (token as any).subscriptionId || null
+        session.user.subscriptionId = null // (token as any).subscriptionId || null
         // @ts-ignore
-        session.user.subscriptionStatus = (token as any).subscriptionStatus || null
+        session.user.subscriptionStatus = null // (token as any).subscriptionStatus || null
         // @ts-ignore enhanced subscription fields
         session.user.hasActiveSubscription = (token as any).hasActiveSubscription || false
         // @ts-ignore
@@ -216,6 +215,17 @@ export async function requireAuth() {
   
   if (!session || !session.user?.id) {
     redirect('/auth/signin')
+  }
+  
+  return session
+}
+
+// Separate function for API routes that returns JSON error instead of redirect
+export async function requireAuthAPI() {
+  const session = await getSession()
+  
+  if (!session || !session.user?.id) {
+    throw new Error('Unauthorized')
   }
   
   return session

@@ -232,7 +232,7 @@ export async function POST(request: NextRequest) {
           batchSize: 1,
           seed: Math.floor(Math.random() * 1000000)
         },
-        webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/training`
+        webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/replicate?type=training&modelId=${model.id}&userId=${session.user.id}`
       }
 
       console.log('🚀 Starting AI training...')

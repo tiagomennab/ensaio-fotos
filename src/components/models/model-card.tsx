@@ -47,6 +47,23 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
     }
   }
 
+  const getStatusText = () => {
+    switch (model.status) {
+      case 'READY':
+        return 'Pronto'
+      case 'TRAINING':
+        return 'Treinando'
+      case 'PROCESSING':
+        return 'Processando'
+      case 'UPLOADING':
+        return 'Carregando'
+      case 'ERROR':
+        return 'Erro'
+      default:
+        return model.status
+    }
+  }
+
   const getStatusColor = () => {
     switch (model.status) {
       case 'READY':
@@ -67,7 +84,7 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
     
     switch (model.class) {
       case 'MAN':
-      case 'WOMAN':
+      case 'MULHER':
         return <User className={iconClass} />
       case 'BOY':
       case 'GIRL':
@@ -78,7 +95,7 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
   }
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this model? This action cannot be undone.')) {
+    if (!confirm('Tem certeza que deseja excluir este modelo? Esta ação não pode ser desfeita.')) {
       return
     }
 
@@ -91,10 +108,10 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
       if (response.ok) {
         window.location.reload()
       } else {
-        alert('Failed to delete model')
+        alert('Falha ao excluir modelo')
       }
     } catch (error) {
-      alert('Error deleting model')
+      alert('Erro ao excluir modelo')
     } finally {
       setIsDeleting(false)
     }
@@ -113,10 +130,10 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
         // Refresh the page to show updated status
         window.location.reload()
       } else {
-        alert(`Failed to sync status: ${result.error || result.message}`)
+        alert(`Falha ao sincronizar status: ${result.error || result.message}`)
       }
     } catch (error) {
-      alert('Error syncing model status')
+      alert('Erro ao sincronizar status do modelo')
     } finally {
       setIsSyncing(false)
     }
@@ -134,10 +151,10 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
             <div className="flex-1">
               <h3 className="font-semibold text-lg leading-tight">{model.name}</h3>
               <p className="text-sm text-gray-600 capitalize">
-                {model.class.toLowerCase().replace('_', ' ')}
+                {model.class === 'WOMAN' ? 'mulher' : model.class === 'MAN' ? 'homem' : model.class.toLowerCase().replace('_', ' ')}
               </p>
               <p className="text-xs text-gray-500 mt-1">
-                Created {formatDate(model.createdAt)}
+                Criado em {formatDate(model.createdAt)}
               </p>
             </div>
           </div>
@@ -160,7 +177,7 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
                     className="flex items-center px-4 py-2 text-sm hover:bg-gray-50"
                   >
                     <Eye className="w-4 h-4 mr-2" />
-                    View Details
+                    Ver Detalhes
                   </Link>
                   
                   {model.status === 'READY' && (
@@ -169,7 +186,7 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
                       className="flex items-center px-4 py-2 text-sm hover:bg-gray-50"
                     >
                       <Play className="w-4 h-4 mr-2" />
-                      Generate Photos
+                      Gerar Fotos
                     </Link>
                   )}
                   
@@ -180,7 +197,7 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
                       className="flex items-center px-4 py-2 text-sm hover:bg-gray-50 w-full text-left"
                     >
                       <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-                      {isSyncing ? 'Syncing...' : 'Sync Status'}
+                      {isSyncing ? 'Sincronizando...' : 'Sincronizar Status'}
                     </button>
                   )}
                   
@@ -190,7 +207,7 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
                     className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left"
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
-                    {isDeleting ? 'Deleting...' : 'Delete'}
+                    {isDeleting ? 'Excluindo...' : 'Excluir'}
                   </button>
                 </div>
               </div>
@@ -205,13 +222,13 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
           <div className="flex items-center space-x-2">
             {getStatusIcon()}
             <Badge variant="secondary" className={getStatusColor()}>
-              {model.status}
+              {getStatusText()}
             </Badge>
           </div>
           
           {model.qualityScore && (
             <div className="text-sm text-gray-600">
-              Quality: {Math.round(model.qualityScore * 100)}%
+              Qualidade: {Math.round(model.qualityScore * 100)}%
             </div>
           )}
         </div>
@@ -220,7 +237,7 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
         {showProgress && (
           <div className="mb-4">
             <div className="flex justify-between text-sm text-gray-600 mb-1">
-              <span>Training Progress</span>
+              <span>Progresso do Treinamento</span>
               <span>{model.progress}%</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -231,7 +248,7 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
             </div>
             {model.estimatedTime && (
               <p className="text-xs text-gray-500 mt-1">
-                ~{model.estimatedTime} minutes remaining
+                ~{model.estimatedTime} minutos restantes
               </p>
             )}
           </div>
@@ -247,11 +264,11 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
         {/* Model stats */}
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <p className="text-gray-600">Total Photos</p>
+            <p className="text-gray-600">Total de Fotos</p>
             <p className="font-semibold">{model.totalPhotos}</p>
           </div>
           <div>
-            <p className="text-gray-600">Generations</p>
+            <p className="text-gray-600">Gerações</p>
             <p className="font-semibold">{model.generations?.length || 0}</p>
           </div>
         </div>
@@ -259,10 +276,10 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
         {/* Sample images preview */}
         {model.sampleImages && model.sampleImages.length > 0 && (
           <div className="mt-4">
-            <p className="text-sm text-gray-600 mb-2">Sample Results</p>
+            <p className="text-sm text-gray-600 mb-2">Exemplos de Resultados</p>
             <div className="grid grid-cols-3 gap-2">
               {model.sampleImages.slice(0, 3).map((image: string, index: number) => (
-                <div key={index} className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                <div key={`${model.id}-sample-${index}`} className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
                   <img
                     src={image}
                     alt={`Sample ${index + 1}`}
@@ -280,7 +297,7 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
             <Button size="sm" asChild className="flex-1">
               <Link href={`/generate?model=${model.id}`}>
                 <Play className="w-4 h-4 mr-1" />
-                Generate
+                Gerar
               </Link>
             </Button>
           )}
@@ -288,7 +305,7 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
           <Button variant="outline" size="sm" asChild className="flex-1">
             <Link href={`/models/${model.id}`}>
               <Eye className="w-4 h-4 mr-1" />
-              Details
+              Detalhes
             </Link>
           </Button>
         </div>

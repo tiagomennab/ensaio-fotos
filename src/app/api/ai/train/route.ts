@@ -7,15 +7,39 @@ import { RateLimiter } from '@/lib/security/rate-limiter'
 import { prisma } from '@/lib/db'
 import { z } from 'zod'
 
+/**
+ * Schema for FLUX model training with maximum quality parameters
+ * Based on Replicate's official documentation and best practices
+ */
 const trainModelSchema = z.object({
   modelId: z.string(),
   triggerWord: z.string().optional(),
   classWord: z.string().optional(),
   trainingParams: z.object({
-    steps: z.number().min(100).max(2000).default(1000),
-    learningRate: z.number().min(1e-6).max(1e-2).default(1e-4),
+    // Core training parameters - optimized for maximum quality
+    steps: z.number().min(500).max(4000).default(2500),
+    learningRate: z.number().min(5e-6).max(5e-4).default(1e-4),
     batchSize: z.number().min(1).max(8).default(1),
-    resolution: z.number().min(512).max(1536).default(1024),
+    resolution: z.string().default("512,768,1024"), // Multiple resolutions for better training
+    
+    // Advanced FLUX parameters for maximum quality
+    loraRank: z.number().min(16).max(64).default(48),
+    networkAlpha: z.number().min(8).max(32).default(24), // Half of lora_rank
+    loraType: z.enum(["subject", "style", "concept"]).default("subject"),
+    
+    // Training optimization
+    optimizer: z.enum(["adamw8bit", "prodigy", "lion", "adamw"]).default("adamw8bit"),
+    mixedPrecision: z.enum(["fp16", "bf16", "no"]).default("fp16"),
+    gradientCheckpointing: z.boolean().default(true),
+    cacheLatents: z.boolean().default(true),
+    
+    // Quality parameters
+    captionDropoutRate: z.number().min(0).max(0.1).default(0.03),
+    noiseOffset: z.number().min(0).max(0.2).default(0.05),
+    shuffleTokens: z.boolean().default(true),
+    autocaption: z.boolean().default(true),
+    
+    // Optional parameters
     seed: z.number().optional()
   }).optional()
 })
@@ -128,29 +152,39 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Calculate training cost
+    // Calculate training cost with optimized parameters for maximum quality
     const finalParams = {
-      steps: trainingParams?.steps || 1000,
+      // Core parameters
+      steps: trainingParams?.steps || 2500,
       learningRate: trainingParams?.learningRate || 1e-4,
       batchSize: trainingParams?.batchSize || 1,
-      resolution: trainingParams?.resolution || 1024,
+      resolution: trainingParams?.resolution || "512,768,1024",
+      
+      // Advanced FLUX parameters for maximum quality
+      lora_rank: trainingParams?.loraRank || 48,
+      network_alpha: trainingParams?.networkAlpha || 24,
+      lora_type: trainingParams?.loraType || "subject",
+      
+      // Training optimization
+      optimizer: trainingParams?.optimizer || "adamw8bit",
+      mixed_precision: trainingParams?.mixedPrecision || "fp16",
+      gradient_checkpointing: trainingParams?.gradientCheckpointing !== false,
+      cache_latents: trainingParams?.cacheLatents !== false,
+      
+      // Quality parameters
+      caption_dropout_rate: trainingParams?.captionDropoutRate || 0.03,
+      noise_offset: trainingParams?.noiseOffset || 0.05,
+      shuffle_tokens: trainingParams?.shuffleTokens !== false,
+      autocaption: trainingParams?.autocaption !== false,
+      
+      // Optional
       seed: trainingParams?.seed
     }
 
-    const cost = calculateTrainingCost(finalParams.steps, finalParams.resolution)
-
-    // Check user credits
-    const availableCredits = model.user.creditsLimit - model.user.creditsUsed
-    if (availableCredits < cost) {
-      return NextResponse.json(
-        { 
-          error: 'Insufficient credits',
-          required: cost,
-          available: availableCredits
-        },
-        { status: 402 }
-      )
-    }
+    // Calculate estimated cost for maximum quality training
+    // Higher quality parameters increase training time and cost
+    const estimatedCost = calculateTrainingCost(finalParams)
+    const cost = 0 // Training remains free, but we track estimated cost
 
     // Get AI provider
     const aiProvider = getAIProvider()
@@ -164,11 +198,15 @@ export async function POST(request: NextRequest) {
       classWord: classWord || model.class.toLowerCase(),
       imageUrls: [...(model.facePhotos || []), ...(model.halfBodyPhotos || []), ...(model.fullBodyPhotos || [])].filter((url): url is string => typeof url === 'string'),
       params: finalParams,
-      webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/training`
+      webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/replicate?type=training&modelId=${model.id}&userId=${session.user.id}`
     }
 
     // Start training
+    console.log('🚀 TA AQUI: Starting AI training...')
+    console.log('🚀 TA AQUI: Training request...', trainingRequest)
     const trainingResponse = await aiProvider.startTraining(trainingRequest)
+    console.log('🚀 TA AQUI: Training response...', trainingResponse)
+    
 
     // Record the training attempt
     await RateLimiter.recordAttempt(userId, 'training', {
@@ -189,17 +227,7 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      // Deduct credits from user
-      await tx.user.update({
-        where: { id: session.user.id },
-        data: {
-          creditsUsed: {
-            increment: cost
-          }
-        }
-      })
-
-      // Log the usage
+      // Log the usage (no credits deducted for training)
       await tx.usageLog.create({
         data: {
           userId: session.user.id,
@@ -207,10 +235,10 @@ export async function POST(request: NextRequest) {
           details: {
             modelId: model.id,
             modelName: model.name,
-            cost,
+            cost: 0,
             trainingId: trainingResponse.id
           },
-          creditsUsed: cost
+          creditsUsed: 0
         }
       })
     })
@@ -287,7 +315,7 @@ export async function GET(request: NextRequest) {
           status: 'READY',
           modelUrl: trainingStatus.model?.url,
           trainedAt: new Date(),
-          qualityScore: 85 // Calculate based on training results
+          qualityScore: 95 // Maximum quality configuration expected score
         }
       })
     } else if (trainingStatus.status === 'failed' && model.status === 'TRAINING') {

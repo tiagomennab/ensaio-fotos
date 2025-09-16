@@ -1,6 +1,6 @@
 export const AI_CONFIG = {
-  // Provider selection: 'replicate' | 'runpod' | 'local'
-  provider: (process.env.AI_PROVIDER || 'replicate') as 'replicate' | 'runpod' | 'local',
+  // Provider selection: 'replicate' | 'runpod' | 'local' | 'gemini'
+  provider: (process.env.AI_PROVIDER || 'replicate') as 'replicate' | 'runpod' | 'local' | 'gemini',
   
   // Replicate Configuration
   replicate: {
@@ -19,7 +19,8 @@ export const AI_CONFIG = {
         training: 'ostris/flux-dev-lora-trainer:26dce37af90b9d997eeb970d92e47de3064d46c300504ae376c75bef6a9022d2',
         generation: 'black-forest-labs/flux-schnell:c846a69991daf4c0e5d016514849d14ee5b2e6846ce6b9d6f21369e564cfe51e', // Schnell - fast generation
         dev: 'black-forest-labs/flux-dev:8beff3369e81422112d93b89ca01426147de542cd4684c244b673b105188fe5f', // Dev - higher quality
-        pro: 'black-forest-labs/flux-pro:5de114640536c3073e8f2b9bb7e7085da94f6e22e5b5169af877e4b92024616e' // Pro - professional quality
+        pro: 'black-forest-labs/flux-pro:5de114640536c3073e8f2b9bb7e7085da94f6e22e5b5169af877e4b92024616e', // Pro - professional quality
+        ultra: 'black-forest-labs/flux-1.1-pro-ultra:6d3c61b08d53c53d6ec8ac0b01b1ec0b4a8aa7cccd95b63c8c97b06e10b59a19' // Ultra - maximum quality (4MP)
       },
       // Stable Diffusion models
       sdxl: {
@@ -27,10 +28,14 @@ export const AI_CONFIG = {
         generation: 'stability-ai/sdxl:7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc',
         turbo: 'stability-ai/sdxl-turbo:da77bc59ee60423279fd632efb4795ab731d9e3ca9705ef3341091fb989b7eaf' // Faster generation
       },
-      // Real-ESRGAN for upscaling
-      upscaler: 'nightmareai/real-esrgan',
+      // Clarity upscaler for upscaling (official model)
+      upscaler: 'philz1337x/clarity-upscaler:dfad41707589d68ecdccd1dfa600d55a208f9310748e44bfe35b4a6291453d5e',
       // Background removal
-      backgroundRemoval: 'rembg/new:fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003'
+      backgroundRemoval: 'rembg/new:fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003',
+      // Video generation with Kling AI 2.1
+      video: {
+        kling: 'kwaivgi/kling-v2.1-master'
+      }
     }
   },
   
@@ -39,6 +44,24 @@ export const AI_CONFIG = {
     apiKey: process.env.RUNPOD_API_KEY || '',
     endpointId: process.env.RUNPOD_ENDPOINT_ID || '',
     webhookUrl: process.env.RUNPOD_WEBHOOK_URL || ''
+  },
+  
+  // Gemini Configuration - Nano Banana (Gemini 2.5 Flash Image)
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY || '',
+    model: 'gemini-2.0-flash-exp',
+    imageModel: 'gemini-2.5-flash-image-preview', // Nano Banana - Latest image editing model
+    maxTokens: 8192,
+    temperature: 0.7,
+    topP: 0.8,
+    topK: 40,
+    // Nano Banana specific settings
+    nanoBanana: {
+      maxImagesPerRequest: 3, // Can blend up to 3 images
+      supportedOperations: ['edit', 'add', 'remove', 'style', 'combine', 'blend'],
+      maxFileSize: 10 * 1024 * 1024, // 10MB limit
+      supportedFormats: ['image/jpeg', 'image/png', 'image/webp']
+    }
   },
   
   // Training Configuration
@@ -53,13 +76,8 @@ export const AI_CONFIG = {
       classWord: 'person', // Default class word
     },
     
-    // Quality settings based on user plan
+    // Quality settings based on user plan (all plans are now paid)
     qualitySettings: {
-      FREE: {
-        maxSteps: 500,
-        maxResolution: 512,
-        maxImages: 10
-      },
       PREMIUM: {
         maxSteps: 1000,
         maxResolution: 1024,
@@ -75,32 +93,90 @@ export const AI_CONFIG = {
   
   // Generation Configuration
   generation: {
-    // Default generation parameters
+    // Model-specific parameters mapping
+    modelParams: {
+      'flux-schnell': {
+        parameterName: 'num_inference_steps',
+        guidanceName: 'guidance_scale',
+        defaultSteps: 4,
+        maxSteps: 8,
+        defaultGuidance: 3.5,
+        maxGuidance: 5.0,
+        supportsAspectRatio: false,
+        supportsRawMode: false,
+        supportsSafetyTolerance: false
+      },
+      'flux-dev': {
+        parameterName: 'num_inference_steps',
+        guidanceName: 'guidance_scale', 
+        defaultSteps: 20,
+        maxSteps: 50,
+        defaultGuidance: 4.0,
+        maxGuidance: 5.0,
+        supportsAspectRatio: false,
+        supportsRawMode: false,
+        supportsSafetyTolerance: false
+      },
+      'flux-pro': {
+        parameterName: 'steps',
+        guidanceName: 'guidance',
+        defaultSteps: 25,
+        maxSteps: 50,
+        defaultGuidance: 4.0,
+        maxGuidance: 5.0,
+        supportsAspectRatio: false,
+        supportsRawMode: false,
+        supportsSafetyTolerance: true
+      },
+      'flux-ultra': {
+        parameterName: null, // Uses aspect_ratio instead of width/height
+        guidanceName: null,  // No guidance parameter
+        defaultSteps: null,
+        maxSteps: null,
+        supportsAspectRatio: true,
+        supportsRawMode: true,
+        supportsSafetyTolerance: true,
+        supportsOutputQuality: true
+      }
+    },
+    
+    // Default generation parameters (optimized for FLUX with user feedback)
     defaultParams: {
       width: 1024,
       height: 1024,
-      steps: 20,
-      guidance_scale: 7.5,
-      scheduler: 'DPMSolverMultistep',
+      steps: 32,  // Optimal quality steps based on user testing
+      guidance_scale: 4.0,  // Optimized for FLUX (reduced from higher values to prevent over-saturation)
+      scheduler: 'DPMSolverMultistep', // Best quality scheduler for FLUX
+      safety_tolerance: 2, // FLUX Pro/Ultra parameter (1-6)
+      output_quality: 95,  // Maximum quality (0-100)
+      output_format: 'png', // PNG for maximum quality without compression
+      raw_mode: false,     // FLUX 1.1 Pro Ultra - raw mode for natural images
       safety_checker: true
     },
     
-    // Generation limits based on user plan
+    // Generation limits based on user plan (optimized for maximum quality)
     limits: {
-      FREE: {
-        maxGenerationsPerDay: 10,
-        maxResolution: 512,
-        maxSteps: 20
+      STARTER: {
+        maxGenerationsPerDay: 1000,
+        maxResolution: 1440,   // Custom models max resolution (Replicate limit)
+        maxSteps: 50,          // Maximum steps for highest quality
+        minResolution: 512,    // Minimum resolution requirement
+        preferredSteps: 25,    // Optimal quality/speed balance
+        maxGuidance: 5.0,      // FLUX Pro maximum guidance
+        allowRawMode: true,    // Enable raw mode for photorealistic results
+        allowUltraQuality: true // Enable maximum quality settings
       },
       PREMIUM: {
         maxGenerationsPerDay: 100,
-        maxResolution: 1024,
-        maxSteps: 50
+        maxResolution: 1536,   // Minimum resolution enforced at 512px
+        maxSteps: 40,          // FLUX Dev optimal range
+        minResolution: 512     // Minimum resolution requirement
       },
       GOLD: {
         maxGenerationsPerDay: 500,
-        maxResolution: 1536,
-        maxSteps: 100
+        maxResolution: 2048,   // Minimum resolution enforced at 512px
+        maxSteps: 50,          // FLUX Pro optimal range
+        minResolution: 512     // Minimum resolution requirement
       }
     }
   },
@@ -129,12 +205,49 @@ export const AI_CONFIG = {
   }
 }
 
-// Helper function to calculate training cost
-export function calculateTrainingCost(steps: number, resolution: number = 1024): number {
+/**
+ * Calculate training cost with advanced FLUX parameters
+ * Updated for maximum quality configuration
+ */
+export function calculateTrainingCost(params: any): number {
   const { training } = AI_CONFIG.costs
+  
+  // Base cost calculation
+  const steps = params.steps || 2500
   const stepCost = (steps / training.baseSteps) * training.costPerStep * training.baseSteps
-  const resolutionMultiplier = Math.pow(resolution / 512, 2)
-  return Math.ceil((training.setupCost + stepCost) * resolutionMultiplier)
+  
+  // Resolution multiplier - handle string format "512,768,1024"
+  let avgResolution = 1024
+  if (typeof params.resolution === 'string') {
+    const resolutions = params.resolution.split(',').map((r: string) => parseInt(r.trim()))
+    avgResolution = resolutions.reduce((a: number, b: number) => a + b, 0) / resolutions.length
+  } else if (typeof params.resolution === 'number') {
+    avgResolution = params.resolution
+  }
+  const resolutionMultiplier = Math.pow(avgResolution / 512, 2)
+  
+  // LoRA rank multiplier (higher rank = more expensive training)
+  const loraRank = params.lora_rank || 48
+  const rankMultiplier = 1 + (loraRank - 16) / 64 // +15% per rank increase of 16
+  
+  // Quality multiplier for advanced parameters
+  let qualityMultiplier = 1.0
+  
+  // Advanced optimizations add ~25% to cost
+  if (params.autocaption) qualityMultiplier += 0.1
+  if (params.gradient_checkpointing) qualityMultiplier += 0.05
+  if (params.cache_latents) qualityMultiplier += 0.05
+  if (params.mixed_precision === 'fp16') qualityMultiplier += 0.05
+  
+  const baseCost = training.setupCost + stepCost
+  const totalCost = baseCost * resolutionMultiplier * rankMultiplier * qualityMultiplier
+  
+  return Math.ceil(totalCost)
+}
+
+// Legacy function for backward compatibility
+export function calculateTrainingCostLegacy(steps: number, resolution: number = 1024): number {
+  return calculateTrainingCost({ steps, resolution })
 }
 
 // Helper function to calculate generation cost
@@ -161,4 +274,111 @@ export function calculateModelQuality(
   const diversityScorePoints = diversityScore * 30 // Max 30 points for diversity
   
   return Math.round(photoScore + resolutionScore + diversityScorePoints)
+}
+
+// Helper functions for model parameter mapping
+export function detectFluxModelType(modelVersion: string): string {
+  if (modelVersion.includes('flux-1.1-pro-ultra')) return 'flux-ultra'
+  if (modelVersion.includes('flux-pro')) return 'flux-pro'
+  if (modelVersion.includes('flux-dev')) return 'flux-dev'
+  if (modelVersion.includes('flux-schnell')) return 'flux-schnell'
+  return 'flux-schnell' // default fallback
+}
+
+export function getModelParams(modelType: string) {
+  return AI_CONFIG.generation.modelParams[modelType as keyof typeof AI_CONFIG.generation.modelParams]
+}
+
+export function mapParametersForModel(modelType: string, settings: any) {
+  const modelParams = getModelParams(modelType)
+  if (!modelParams) {
+    console.warn(`⚠️ Unknown model type: ${modelType}, falling back to original settings`)
+    return settings
+  }
+
+  const mapped: any = {}
+  
+  // Common parameters that all models need
+  mapped.prompt = settings.prompt
+  mapped.seed = settings.seed
+  mapped.num_outputs = settings.num_outputs || 1
+  
+  // Handle FLUX Ultra special case (uses aspect_ratio)
+  if (modelType === 'flux-ultra') {
+    mapped.aspect_ratio = calculateAspectRatio(settings.width || 1024, settings.height || 1024)
+    mapped.safety_tolerance = settings.safety_tolerance || 2
+    mapped.output_quality = settings.output_quality || 95
+    mapped.raw_mode = settings.raw_mode || false
+    mapped.output_format = settings.output_format || 'jpg'
+  } else {
+    // Standard FLUX models use width/height
+    mapped.width = settings.width || 1024
+    mapped.height = settings.height || 1024
+    
+    // Map steps parameter
+    if (modelParams.parameterName) {
+      const steps = Math.min(
+        settings.steps || modelParams.defaultSteps,
+        modelParams.maxSteps
+      )
+      mapped[modelParams.parameterName] = steps
+    }
+    
+    // Map guidance parameter
+    if (modelParams.guidanceName) {
+      const guidance = Math.min(
+        settings.guidance_scale || modelParams.defaultGuidance,
+        modelParams.maxGuidance
+      )
+      mapped[modelParams.guidanceName] = guidance
+    }
+    
+    // FLUX Pro specific parameters
+    if (modelType === 'flux-pro' && modelParams.supportsSafetyTolerance) {
+      mapped.safety_tolerance = settings.safety_tolerance || 2
+      mapped.output_format = settings.output_format || 'png'
+      mapped.output_quality = settings.output_quality || 95
+    }
+  }
+  
+  return mapped
+}
+
+export function calculateAspectRatio(width: number, height: number): string {
+  const ratio = width / height
+  
+  // Map common aspect ratios to FLUX Ultra supported formats
+  const ratioMap: { [key: string]: string } = {
+    '2.33': '21:9',  // Ultra wide
+    '1.78': '16:9',  // Standard widescreen
+    '1.50': '3:2',   // Photography standard
+    '1.33': '4:3',   // Traditional
+    '1.25': '5:4',   // Square-ish
+    '1.00': '1:1',   // Perfect square
+    '0.80': '4:5',   // Portrait
+    '0.75': '3:4',   // Portrait traditional
+    '0.67': '2:3',   // Portrait photography
+    '0.56': '9:16',  // Mobile portrait
+    '0.43': '9:21'   // Ultra tall
+  }
+  
+  // Find closest match
+  const ratioString = ratio.toFixed(2)
+  if (ratioMap[ratioString]) {
+    return ratioMap[ratioString]
+  }
+  
+  // Find closest ratio by comparing differences
+  let closestRatio = '1:1'
+  let smallestDiff = Infinity
+  
+  for (const [key, value] of Object.entries(ratioMap)) {
+    const diff = Math.abs(parseFloat(key) - ratio)
+    if (diff < smallestDiff) {
+      smallestDiff = diff
+      closestRatio = value
+    }
+  }
+  
+  return closestRatio
 }

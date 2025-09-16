@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, X, Sparkles, User, Settings, LogOut, CreditCard, Camera, ImageIcon, Users, Package, Crown } from 'lucide-react'
+import { Menu, X, Sparkles, User, Settings, LogOut, CreditCard, Camera, ImageIcon, Users, Package, Crown, History, UserCircle, MessageSquare, Coins } from 'lucide-react'
 import Link from 'next/link'
 import { useSession, signOut } from 'next-auth/react'
 import { VibePhotoLogo } from '@/components/ui/vibephoto-logo'
@@ -33,6 +33,7 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
     { name: 'Gerar', href: '/generate', icon: <Camera className="w-4 h-4" /> },
     { name: 'Galeria', href: '/gallery', icon: <ImageIcon className="w-4 h-4" /> },
     { name: 'Pacotes', href: '/packages', icon: <Package className="w-4 h-4" /> },
+    { name: 'Créditos', href: '/credits', icon: <Coins className="w-4 h-4" /> },
   ] : []
 
   return (
@@ -124,9 +125,17 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
                         <CreditCard className="w-4 h-4 text-slate-500" />
                         <span className="text-slate-700">Minha Assinatura</span>
                       </Link>
-                      <Link href="/settings" className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors">
-                        <Settings className="w-4 h-4 text-slate-500" />
-                        <span className="text-slate-700">Configurações</span>
+                      <Link href="/credits/history" className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors">
+                        <History className="w-4 h-4 text-slate-500" />
+                        <span className="text-slate-700">Histórico de Créditos</span>
+                      </Link>
+                      <Link href="/profile" className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors">
+                        <UserCircle className="w-4 h-4 text-slate-500" />
+                        <span className="text-slate-700">Perfil</span>
+                      </Link>
+                      <Link href="/support" className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors">
+                        <MessageSquare className="w-4 h-4 text-slate-500" />
+                        <span className="text-slate-700">Fale Conosco</span>
                       </Link>
                       <button 
                         onClick={() => signOut()}
@@ -215,9 +224,22 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
                       <p className="font-semibold text-slate-900">{session.user?.name}</p>
                       <p className="text-sm text-purple-600">{session.user?.plan || 'STARTER'} Plan</p>
                     </div>
+                    
                     <Link href="/billing" className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-100 transition-colors">
                       <CreditCard className="w-5 h-5 text-slate-500" />
                       <span className="font-medium text-slate-700">Minha Assinatura</span>
+                    </Link>
+                    <Link href="/credits/history" className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-100 transition-colors">
+                      <History className="w-5 h-5 text-slate-500" />
+                      <span className="font-medium text-slate-700">Histórico de Créditos</span>
+                    </Link>
+                    <Link href="/profile" className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-100 transition-colors">
+                      <UserCircle className="w-5 h-5 text-slate-500" />
+                      <span className="font-medium text-slate-700">Perfil</span>
+                    </Link>
+                    <Link href="/support" className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-100 transition-colors">
+                      <MessageSquare className="w-5 h-5 text-slate-500" />
+                      <span className="font-medium text-slate-700">Fale Conosco</span>
                     </Link>
                     <button 
                       onClick={() => signOut()}

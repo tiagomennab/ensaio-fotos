@@ -16,6 +16,7 @@ export interface UploadOptions {
   maxHeight?: number
   generateThumbnail?: boolean
   makePublic?: boolean
+  isVideo?: boolean
 }
 
 export interface FileValidation {
@@ -39,12 +40,23 @@ export abstract class StorageProvider {
   
   abstract getPublicUrl(key: string): string
   
-  abstract validateFile(file: File): FileValidation
+  abstract validateFile(file: File, isVideo?: boolean): FileValidation
   
   abstract generateThumbnail(
     sourceKey: string,
     thumbnailPath: string
   ): Promise<UploadResult>
+
+  abstract uploadFromUrl(
+    url: string,
+    path: string,
+    options?: UploadOptions
+  ): Promise<UploadResult>
+
+  abstract getSignedUrl(
+    key: string,
+    expiresIn?: number
+  ): Promise<string>
 }
 
 export class StorageError extends Error {

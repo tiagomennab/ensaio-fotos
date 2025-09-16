@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
     })
     
-    let syncResults = {
+    const syncResults = {
       payments_synced: 0,
       subscriptions_synced: 0,
       errors: 0

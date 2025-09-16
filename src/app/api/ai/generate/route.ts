@@ -198,11 +198,62 @@ export async function POST(request: NextRequest) {
       prompt: finalPrompt,
       negativePrompt: negativePrompt,
       params: finalParams,
-      webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/generation`
+      webhookUrl: process.env.NODE_ENV === 'production' 
+        ? `${process.env.NEXTAUTH_URL}/api/webhooks/generation`
+        : undefined // No webhook in development - will use polling instead
     }
 
     // Start generation
+    console.log(`🚀 About to call AI provider generateImage`)
     const generationResponse = await aiProvider.generateImage(generationRequest)
+    console.log(`📋 AI provider response:`, {
+      id: generationResponse.id,
+      status: generationResponse.status,
+      estimatedTime: generationResponse.estimatedTime
+    })
+
+    // Check if we have a valid webhook URL (requires HTTPS in production)
+    const hasValidWebhook = generationRequest.webhookUrl !== undefined && (
+      process.env.NODE_ENV === 'development' ||
+      generationRequest.webhookUrl.startsWith('https://')
+    )
+
+    const shouldPoll = !hasValidWebhook || process.env.NODE_ENV === 'development'
+
+    console.log(`🔍 Generation flow decision:`, {
+      hasWebhookUrl: !!generationRequest.webhookUrl,
+      webhookUrl: generationRequest.webhookUrl,
+      hasValidWebhook,
+      shouldPoll,
+      environment: process.env.NODE_ENV,
+      predictionId: generationResponse.id
+    })
+
+    // Always use polling in development, or when webhook is not available
+    if (shouldPoll && generationResponse.id) {
+      console.log(`🔄 Starting polling for prediction ${generationResponse.id} (webhook: ${hasValidWebhook ? 'yes' : 'no'})`)
+
+      // Start polling in background with improved error handling
+      try {
+        const { startPolling } = await import('@/lib/services/polling-service')
+
+        // Use setTimeout instead of setImmediate for better reliability
+        setTimeout(async () => {
+          try {
+            await startPolling(generationResponse.id, generation.id, userId)
+            console.log(`✅ Polling service started successfully for ${generationResponse.id}`)
+          } catch (error) {
+            console.error(`❌ Failed to start polling for ${generationResponse.id}:`, error)
+          }
+        }, 100) // Small delay to ensure transaction completion
+
+        console.log(`📝 Polling startup scheduled for ${generationResponse.id}`)
+      } catch (importError) {
+        console.error(`❌ Failed to import polling service for ${generationResponse.id}:`, importError)
+      }
+    } else {
+      console.log(`⚠️ Polling skipped for ${generationResponse.id}:`, { shouldPoll, hasGenerationId: !!generationResponse.id })
+    }
 
     // Record the generation attempt
     await RateLimiter.recordAttempt(userId, 'generation', {
@@ -214,6 +265,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Update generation with job ID and deduct credits
+    console.log(`💾 About to update database with job ID: ${generationResponse.id}`)
     await prisma.$transaction(async (tx) => {
       // Update generation record
       await tx.generation.update({

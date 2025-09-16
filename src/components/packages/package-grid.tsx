@@ -18,7 +18,7 @@ interface Package {
   name: string
   category: string
   description: string
-  prompts: string[]
+  promptCount: number
   previewImages: string[]
   price: number
   isPremium: boolean
@@ -192,7 +192,7 @@ export function PackageGrid({ packages, onPackageSelect }: PackageGridProps) {
                 </span>
                 {pkg.features && (
                   <div className="text-xs text-gray-400 mt-1">
-                    {pkg.features[0]} {/* Show first feature which is '30 fotos geradas' */}
+                    {pkg.features[0]} {/* Show first feature which is '20 fotos geradas' */}
                   </div>
                 )}
               </div>
@@ -202,7 +202,7 @@ export function PackageGrid({ packages, onPackageSelect }: PackageGridProps) {
                 onClick={() => onPackageSelect(pkg)}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200"
               >
-                {pkg.isPremium ? 'Desbloquear' : 'Usar Agora'}
+                Comprar Agora
               </Button>
             </div>
 

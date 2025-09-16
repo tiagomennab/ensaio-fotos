@@ -12,15 +12,11 @@ import {
   Users, 
   Clock, 
   Eye,
-  Download,
   Play,
-  Copy,
   Heart,
   Share2,
-  CheckCircle,
   AlertCircle,
-  Sparkles,
-  Zap
+  Sparkles
 } from 'lucide-react'
 
 interface Package {
@@ -28,7 +24,7 @@ interface Package {
   name: string
   category: string
   description: string
-  prompts: string[]
+  promptCount: number
   previewImages: string[]
   price: number
   isPremium: boolean
@@ -46,7 +42,6 @@ interface PackageModalProps {
 }
 
 export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
-  const [selectedPrompt, setSelectedPrompt] = useState(0)
   const [isGenerating, setIsGenerating] = useState(false)
   const [generationProgress, setGenerationProgress] = useState(0)
 
@@ -67,10 +62,6 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
     }, 300)
   }
 
-  const handleCopyPrompt = (prompt: string) => {
-    navigator.clipboard.writeText(prompt)
-    // You could add a toast notification here
-  }
 
   const getCategoryColor = (category: string) => {
     const colors = {
@@ -115,7 +106,7 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
                 </div>
                 <div className="flex items-center">
                   <Sparkles className="w-4 h-4 mr-1 text-purple-400" />
-                  {pkg.prompts.length} prompts
+                  {pkg.promptCount} prompts
                 </div>
               </div>
             </div>
@@ -128,9 +119,8 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
 
         <div className="p-6">
           <Tabs defaultValue="preview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3 bg-gray-700 border border-gray-600">
+            <TabsList className="grid w-full grid-cols-2 bg-gray-700 border border-gray-600">
               <TabsTrigger value="preview" className="data-[state=active]:bg-gray-600 data-[state=active]:text-white text-gray-300">Visualizar</TabsTrigger>
-              <TabsTrigger value="prompts" className="data-[state=active]:bg-gray-600 data-[state=active]:text-white text-gray-300">Prompts ({pkg.prompts.length})</TabsTrigger>
               <TabsTrigger value="details" className="data-[state=active]:bg-gray-600 data-[state=active]:text-white text-gray-300">Detalhes</TabsTrigger>
             </TabsList>
 
@@ -182,7 +172,7 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
                   ) : (
                     <>
                       <Play className="w-4 h-4 mr-2" />
-                      Gerar Todos ({pkg.prompts.length})
+                      Gerar Todos ({pkg.promptCount})
                     </>
                   )}
                 </Button>
@@ -217,64 +207,6 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
               )}
             </TabsContent>
 
-            <TabsContent value="prompts" className="space-y-4">
-              <div className="grid gap-4">
-                {pkg.prompts.map((prompt, index) => (
-                  <Card 
-                    key={index} 
-                    className={`cursor-pointer transition-all border-gray-600 ${
-                      selectedPrompt === index 
-                        ? 'ring-2 ring-blue-500 bg-gray-700 border-blue-500' 
-                        : 'bg-gray-800 hover:bg-gray-700 hover:shadow-md'
-                    }`}
-                    onClick={() => setSelectedPrompt(index)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <Badge variant="outline" className="border-gray-500 text-gray-300">Prompt {index + 1}</Badge>
-                            {selectedPrompt === index && (
-                              <Badge variant="default" className="bg-blue-600 text-white">
-                                <CheckCircle className="w-3 h-3 mr-1" />
-                                Selecionado
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-gray-300">{prompt}</p>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2 ml-4">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-gray-400 hover:text-white hover:bg-gray-600"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleCopyPrompt(prompt)
-                            }}
-                          >
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              // Handle individual prompt generation
-                            }}
-                          >
-                            <Zap className="w-4 h-4 mr-1" />
-                            Gerar
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </TabsContent>
 
             <TabsContent value="details" className="space-y-6">
               {/* Package Stats */}
@@ -306,7 +238,7 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
                 <Card className="bg-gray-700 border-gray-600">
                   <CardContent className="p-4 text-center">
                     <Sparkles className="w-8 h-8 text-purple-400 mx-auto mb-2" />
-                    <div className="text-2xl font-bold text-white">{pkg.prompts.length}</div>
+                    <div className="text-2xl font-bold text-white">{pkg.promptCount}</div>
                     <div className="text-sm text-gray-400">Prompts</div>
                   </CardContent>
                 </Card>
@@ -335,7 +267,7 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400">Tipo:</span>
-                      <span className="font-medium text-white">{pkg.isPremium ? 'Premium' : 'Gratuito'}</span>
+                      <span className="font-medium text-white">Premium</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400">Preço:</span>
@@ -377,7 +309,7 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
             <div className="flex items-center space-x-4">
               <span className="text-2xl font-bold text-white">R$ {pkg.price}</span>
               <span className="text-gray-400">
-                {pkg.prompts.length} prompts • {pkg.estimatedTime}
+                {pkg.promptCount} prompts • {pkg.estimatedTime}
               </span>
             </div>
             
@@ -390,7 +322,7 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
                 onClick={handleGenerate}
                 disabled={isGenerating}
               >
-                {pkg.isPremium ? 'Desbloquear e Gerar' : 'Gerar Agora'}
+                Comprar Agora
               </Button>
             </div>
           </div>

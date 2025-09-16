@@ -10,10 +10,34 @@ export interface TrainingRequest {
 }
 
 export interface TrainingParams {
+  // Core training parameters
   steps: number
   learningRate: number
   batchSize: number
-  resolution: number
+  resolution: number | string // Support both number and string formats
+  
+  // Advanced FLUX parameters for maximum quality
+  lora_rank?: number
+  network_alpha?: number
+  lora_type?: 'subject' | 'style' | 'concept'
+  
+  // Training optimization
+  optimizer?: 'adamw8bit' | 'prodigy' | 'lion' | 'adamw'
+  mixed_precision?: 'fp16' | 'bf16' | 'no'
+  gradient_checkpointing?: boolean
+  cache_latents?: boolean
+  
+  // Quality parameters
+  caption_dropout_rate?: number
+  noise_offset?: number
+  shuffle_tokens?: boolean
+  autocaption?: boolean
+  
+  // Compatibility with different naming conventions
+  learning_rate?: number // Alternative naming for learningRate
+  batch_size?: number     // Alternative naming for batchSize
+  
+  // Optional parameters
   seed?: number
 }
 
@@ -50,6 +74,11 @@ export interface GenerationParams {
   seed?: number
   num_outputs?: number
   safety_checker?: boolean
+  // FLUX-specific parameters
+  safety_tolerance?: number
+  raw_mode?: boolean
+  output_format?: string
+  output_quality?: number
 }
 
 export interface GenerationResponse {

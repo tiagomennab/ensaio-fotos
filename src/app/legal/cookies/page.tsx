@@ -1,22 +1,22 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Cookie, Settings, BarChart3, Shield, Calendar, ToggleLeft } from 'lucide-react'
+import { Cookie, Calendar, Settings, BarChart3, Shield, AlertTriangle, ToggleLeft, Eye } from 'lucide-react'
 import Link from 'next/link'
 
 export default function CookiesPage() {
   const lastUpdated = '26 de Agosto de 2025'
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-br from-[#667EEA]/10 via-white to-[#764BA2]/10">
       <div className="max-w-4xl mx-auto px-4 py-12">
         {/* Header */}
         <div className="text-center mb-12">
-          <Badge className="mb-4">
+          <Badge className="mb-4 bg-gradient-to-r from-[#667EEA] to-[#764BA2] text-white border-none">
             <Cookie className="w-4 h-4 mr-2" />
             Política de Cookies
           </Badge>
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Política de Cookies e Tecnologias Similares
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-[#667EEA] to-[#764BA2] bg-clip-text text-transparent mb-4">
+            Política de Cookies do Vibe Photo
           </h1>
           <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
             <Calendar className="w-4 h-4" />
@@ -26,10 +26,10 @@ export default function CookiesPage() {
 
         <div className="prose prose-lg max-w-none">
           {/* Introduction */}
-          <Card className="mb-8">
+          <Card className="mb-8 border-none shadow-md hover:shadow-lg transition-shadow">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Cookie className="w-5 h-5 text-orange-600" />
+              <CardTitle className="flex items-center gap-2 bg-gradient-to-r from-[#667EEA] to-[#764BA2] bg-clip-text text-transparent">
+                <Cookie className="w-5 h-5 text-[#667EEA]" />
                 1. O que são Cookies?
               </CardTitle>
             </CardHeader>
@@ -38,21 +38,21 @@ export default function CookiesPage() {
                 Cookies são pequenos arquivos de texto armazenados em seu dispositivo quando você visita um site. Eles são amplamente utilizados para fazer os sites funcionarem de forma eficiente, bem como fornecer informações aos proprietários do site.
               </p>
               <p>
-                No <strong>Ensaio Fotos</strong>, utilizamos cookies e tecnologias similares para melhorar sua experiência, personalizar conteúdo e analisar como nossa plataforma é utilizada, sempre respeitando sua privacidade e preferências.
+                No <strong>Vibe Photo</strong>, utilizamos cookies e tecnologias similares para melhorar sua experiência, personalizar conteúdo e analisar como nossa plataforma é utilizada, sempre respeitando sua privacidade e preferências.
               </p>
-              <div className="bg-orange-50 p-4 rounded-lg border-l-4 border-orange-500">
-                <p className="text-orange-800">
-                  <strong>🍪 Transparência:</strong> Esta política explica detalhadamente todos os cookies que utilizamos e como você pode controlar suas preferências.
+              <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
+                <p className="text-blue-800 font-medium">
+                  🍪 Transparência: Esta política explica detalhadamente todos os cookies que utilizamos e como você pode controlar suas preferências.
                 </p>
               </div>
             </CardContent>
           </Card>
 
           {/* Types of Cookies */}
-          <Card className="mb-8">
+          <Card className="mb-8 border-none shadow-md hover:shadow-lg transition-shadow">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="w-5 h-5 text-blue-600" />
+              <CardTitle className="flex items-center gap-2 bg-gradient-to-r from-[#667EEA] to-[#764BA2] bg-clip-text text-transparent">
+                <Settings className="w-5 h-5 text-[#667EEA]" />
                 2. Tipos de Cookies que Utilizamos
               </CardTitle>
             </CardHeader>
@@ -60,7 +60,7 @@ export default function CookiesPage() {
               <h3 className="text-lg font-semibold">2.1 Cookies Essenciais (Necessários)</h3>
               <div className="bg-red-50 p-4 rounded-lg border-l-4 border-red-500">
                 <p className="text-red-800 font-medium">
-                  ✅ <strong>Sempre Ativos:</strong> Estes cookies são essenciais para o funcionamento do site e não podem ser desativados.
+                  ✅ Sempre Ativos: Estes cookies são essenciais para o funcionamento do site e não podem ser desativados.
                 </p>
               </div>
               
@@ -101,7 +101,7 @@ export default function CookiesPage() {
               <h3 className="text-lg font-semibold">2.2 Cookies Funcionais</h3>
               <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
                 <p className="text-blue-800 font-medium">
-                  🎛️ <strong>Controláveis:</strong> Melhoram a funcionalidade e personalização. Você pode desativá-los.
+                  🎛️ Controláveis: Melhoram a funcionalidade e personalização. Você pode desativá-los.
                 </p>
               </div>
               
@@ -142,7 +142,7 @@ export default function CookiesPage() {
               <h3 className="text-lg font-semibold">2.3 Cookies de Análise</h3>
               <div className="bg-green-50 p-4 rounded-lg border-l-4 border-green-500">
                 <p className="text-green-800 font-medium">
-                  📊 <strong>Analíticos:</strong> Ajudam-nos a entender como melhorar nossos serviços. Totalmente opcionais.
+                  📊 Analíticos: Ajudam-nos a entender como melhorar nossos serviços. Totalmente opcionais.
                 </p>
               </div>
               
@@ -194,10 +194,10 @@ export default function CookiesPage() {
           </Card>
 
           {/* Third Party */}
-          <Card className="mb-8">
+          <Card className="mb-8 border-none shadow-md hover:shadow-lg transition-shadow">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-purple-600" />
+              <CardTitle className="flex items-center gap-2 bg-gradient-to-r from-[#667EEA] to-[#764BA2] bg-clip-text text-transparent">
+                <BarChart3 className="w-5 h-5 text-[#667EEA]" />
                 3. Tecnologias de Terceiros
               </CardTitle>
             </CardHeader>
@@ -241,10 +241,10 @@ export default function CookiesPage() {
           </Card>
 
           {/* Cookie Management */}
-          <Card className="mb-8">
+          <Card className="mb-8 border-none shadow-md hover:shadow-lg transition-shadow">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ToggleLeft className="w-5 h-5 text-green-600" />
+              <CardTitle className="flex items-center gap-2 bg-gradient-to-r from-[#667EEA] to-[#764BA2] bg-clip-text text-transparent">
+                <ToggleLeft className="w-5 h-5 text-[#667EEA]" />
                 4. Como Gerenciar Suas Preferências de Cookies
               </CardTitle>
             </CardHeader>
@@ -256,12 +256,12 @@ export default function CookiesPage() {
               <ul className="list-disc pl-6 space-y-2">
                 <li><strong>Banner de Cookies:</strong> Aparece na primeira visita</li>
                 <li><strong>Central de Preferências:</strong> Acesse através do rodapé da página</li>
-                <li><strong>Configurações da Conta:</strong> Seção &quot;Privacidade&quot; em seu perfil</li>
+                <li><strong>Configurações da Conta:</strong> Seção "Privacidade" em seu perfil</li>
               </ul>
 
-              <div className="bg-green-50 p-4 rounded-lg">
-                <p className="text-green-800 text-sm">
-                  <strong>✅ Controle Total:</strong> Você pode ativar ou desativar cada categoria de cookies individualmente, exceto os essenciais que são necessários para o funcionamento do site.
+              <div className="bg-green-50 p-4 rounded-lg border-l-4 border-green-500">
+                <p className="text-green-800 font-medium">
+                  ✅ Controle Total: Você pode ativar ou desativar cada categoria de cookies individualmente, exceto os essenciais que são necessários para o funcionamento do site.
                 </p>
               </div>
 
@@ -290,17 +290,17 @@ export default function CookiesPage() {
               </div>
 
               <div className="bg-orange-50 p-4 rounded-lg border-l-4 border-orange-500">
-                <p className="text-orange-800">
-                  <strong>⚠️ Atenção:</strong> Desativar todos os cookies pode afetar a funcionalidade do site, como manter você logado ou lembrar suas preferências.
+                <p className="text-orange-800 font-medium">
+                  ⚠️ Atenção: Desativar todos os cookies pode afetar a funcionalidade do site, como manter você logado ou lembrar suas preferências.
                 </p>
               </div>
             </CardContent>
           </Card>
 
           {/* Local Storage */}
-          <Card className="mb-8">
+          <Card className="mb-8 border-none shadow-md hover:shadow-lg transition-shadow">
             <CardHeader>
-              <CardTitle>5. Outras Tecnologias de Armazenamento</CardTitle>
+              <CardTitle className="bg-gradient-to-r from-[#667EEA] to-[#764BA2] bg-clip-text text-transparent">5. Outras Tecnologias de Armazenamento</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <h3 className="text-lg font-semibold">5.1 Local Storage</h3>
@@ -330,16 +330,16 @@ export default function CookiesPage() {
           </Card>
 
           {/* Updates */}
-          <Card className="mb-8">
+          <Card className="mb-8 border-none shadow-md hover:shadow-lg transition-shadow">
             <CardHeader>
-              <CardTitle>6. Atualizações desta Política</CardTitle>
+              <CardTitle className="bg-gradient-to-r from-[#667EEA] to-[#764BA2] bg-clip-text text-transparent">6. Atualizações desta Política</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p>
                 Esta Política de Cookies pode ser atualizada ocasionalmente. Quando isso acontecer:
               </p>
               <ul className="list-disc pl-6 space-y-2">
-                <li>A data de &quot;última atualização&quot; será alterada</li>
+                <li>A data de "última atualização" será alterada</li>
                 <li>Você será notificado através de um banner na próxima visita</li>
                 <li>Mudanças significativas serão comunicadas por email</li>
                 <li>Você poderá revisar e atualizar suas preferências</li>
@@ -351,23 +351,23 @@ export default function CookiesPage() {
           </Card>
 
           {/* Contact */}
-          <Card className="mb-8">
+          <Card className="mb-8 border-none shadow-md hover:shadow-lg transition-shadow">
             <CardHeader>
-              <CardTitle>7. Contato e Dúvidas</CardTitle>
+              <CardTitle className="bg-gradient-to-r from-[#667EEA] to-[#764BA2] bg-clip-text text-transparent">7. Contato e Dúvidas</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p>
-                Se você tiver dúvidas sobre nossa política de cookies ou sobre como gerenciar suas preferências:
+                Para dúvidas sobre nossa política de cookies:
               </p>
-              <ul className="list-disc pl-6 space-y-2">
-                <li><strong>Suporte:</strong> support@ensaiofotos.com</li>
-                <li><strong>Privacidade:</strong> dpo@ensaiofotos.com</li>
-                <li><strong>Geral:</strong> legal@ensaiofotos.com</li>
+              <ul className="list-none space-y-2">
+                <li><strong>Suporte:</strong> support@vibephoto.com</li>
+                <li><strong>Privacidade:</strong> dpo@vibephoto.com</li>
+                <li><strong>Geral:</strong> legal@vibephoto.com</li>
               </ul>
 
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <p className="text-blue-800">
-                  <strong>🤝 Compromisso:</strong> Estamos comprometidos com a transparência no uso de cookies e respeitamos totalmente suas preferências de privacidade.
+              <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
+                <p className="text-blue-800 font-medium">
+                  🤝 Compromisso: Estamos comprometidos com a transparência no uso de cookies e respeitamos totalmente suas preferências de privacidade.
                 </p>
               </div>
             </CardContent>
@@ -380,14 +380,14 @@ export default function CookiesPage() {
                 <CardContent className="p-6 text-center">
                   <Shield className="w-8 h-8 text-purple-600 mx-auto mb-2" />
                   <h3 className="font-semibold">Política de Privacidade</h3>
-                  <p className="text-sm text-gray-600 mt-1">Como protegemos seus dados</p>
+                  <p className="text-sm text-gray-600 mt-1">Como protegemos dados</p>
                 </CardContent>
               </Card>
             </Link>
             <Link href="/legal/terms" className="block">
               <Card className="hover:shadow-lg transition-shadow">
                 <CardContent className="p-6 text-center">
-                  <Settings className="w-8 h-8 text-purple-600 mx-auto mb-2" />
+                  <AlertTriangle className="w-8 h-8 text-purple-600 mx-auto mb-2" />
                   <h3 className="font-semibold">Termos de Uso</h3>
                   <p className="text-sm text-gray-600 mt-1">Condições de uso</p>
                 </CardContent>

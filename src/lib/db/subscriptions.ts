@@ -40,7 +40,7 @@ export async function updateSubscriptionStatus(
   // If subscription is cancelled or expired, downgrade to FREE
   if (['CANCELLED', 'EXPIRED', 'OVERDUE'].includes(status)) {
     updateData.plan = Plan.STARTER
-    updateData.creditsLimit = 10
+    updateData.creditsLimit = 500
   }
 
   return prisma.user.update({
@@ -55,7 +55,7 @@ export async function cancelSubscription(userId: string) {
     data: {
       subscriptionStatus: 'CANCELLED',
       plan: Plan.STARTER,
-      creditsLimit: 10
+      creditsLimit: 500
     }
   })
 }
@@ -97,13 +97,13 @@ export async function updateUserAsaasCustomerId(userId: string, asaasCustomerId:
 function getCreditsLimitForPlan(plan: Plan): number {
   switch (plan) {
     case Plan.STARTER:
-      return 10
-    case Plan.PREMIUM:
-      return 100
-    case Plan.GOLD:
       return 500
+    case Plan.PREMIUM:
+      return 1200
+    case Plan.GOLD:
+      return 2500
     default:
-      return 10
+      return 500
   }
 }
 

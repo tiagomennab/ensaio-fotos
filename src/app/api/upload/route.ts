@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { getStorageProvider, UPLOAD_PATHS, STORAGE_CONFIG } from '@/lib/storage'
+import { getStorageProvider, STORAGE_CONFIG, isValidUploadCategory, type UploadCategory } from '@/lib/storage'
+import { AWSS3Provider } from '@/lib/storage/providers/aws-s3'
+import { getCategoryForMediaType, type ValidCategory } from '@/lib/storage/path-utils'
 import { z } from 'zod'
 
 const uploadSchema = z.object({
-  type: z.enum(['face', 'body', 'generated']),
+  type: z.enum(['face', 'body', 'generated', 'images', 'videos', 'edited', 'upscaled']),
+  category: z.enum(['images', 'videos', 'edited', 'upscaled', 'thumbnails']).optional(),
   modelId: z.string().optional(),
-  generateThumbnail: z.boolean().optional().default(false)
+  generateThumbnail: z.boolean().optional().default(false),
+  useStandardizedStructure: z.boolean().optional().default(true) // Default to new structure
 })
 
 export async function POST(request: NextRequest) {
@@ -25,8 +29,10 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData()
     const file = formData.get('file') as File
     const type = formData.get('type') as string
+    const category = formData.get('category') as string | null
     const modelId = formData.get('modelId') as string | null
     const generateThumbnail = formData.get('generateThumbnail') === 'true'
+    const useStandardizedStructure = formData.get('useStandardizedStructure') !== 'false' // Default true
 
     if (!file) {
       return NextResponse.json(
@@ -38,8 +44,10 @@ export async function POST(request: NextRequest) {
     // Validate input
     const validationResult = uploadSchema.safeParse({
       type,
+      category: category || undefined,
       modelId: modelId || undefined,
-      generateThumbnail
+      generateThumbnail,
+      useStandardizedStructure
     })
 
     if (!validationResult.success) {
@@ -49,7 +57,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { type: uploadType, generateThumbnail: shouldGenerateThumbnail } = validationResult.data
+    const {
+      type: uploadType,
+      category: uploadCategory,
+      generateThumbnail: shouldGenerateThumbnail,
+      useStandardizedStructure: shouldUseStandardStructure
+    } = validationResult.data
 
     // Get storage provider
     const storage = getStorageProvider()
@@ -63,63 +76,131 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Determine upload path and processing options
-    let uploadPath: string
+    // Determine category and upload configuration
+    let finalCategory: ValidCategory
     let processingOptions: any = {
       generateThumbnail: shouldGenerateThumbnail
     }
 
-    switch (uploadType) {
-      case 'face':
-        uploadPath = `${session.user.id}/${UPLOAD_PATHS.training.face}`
-        processingOptions = {
-          ...processingOptions,
-          ...STORAGE_CONFIG.processing.face
+    if (shouldUseStandardStructure) {
+      // Use new standardized structure
+      if (uploadCategory) {
+        // Explicit category provided
+        finalCategory = uploadCategory as ValidCategory
+      } else {
+        // Derive category from type
+        const mediaType = file.type.startsWith('video/') ? 'VIDEO' : 'IMAGE'
+
+        switch (uploadType) {
+          case 'generated':
+          case 'images':
+            finalCategory = 'images'
+            processingOptions = { ...processingOptions, ...STORAGE_CONFIG.processing.generated }
+            break
+          case 'videos':
+            finalCategory = 'videos'
+            break
+          case 'edited':
+            finalCategory = 'edited'
+            processingOptions = { ...processingOptions, ...STORAGE_CONFIG.processing.generated }
+            break
+          case 'upscaled':
+            finalCategory = 'upscaled'
+            processingOptions = { ...processingOptions, ...STORAGE_CONFIG.processing.generated }
+            break
+          case 'face':
+            finalCategory = 'images'
+            processingOptions = { ...processingOptions, ...STORAGE_CONFIG.processing.face }
+            break
+          case 'body':
+            finalCategory = 'images'
+            processingOptions = { ...processingOptions, ...STORAGE_CONFIG.processing.body }
+            break
+          default:
+            return NextResponse.json(
+              { error: 'Invalid upload type for standardized structure' },
+              { status: 400 }
+            )
         }
-        break
-      case 'body':
-        uploadPath = `${session.user.id}/${UPLOAD_PATHS.training.body}`
-        processingOptions = {
-          ...processingOptions,
-          ...STORAGE_CONFIG.processing.body
-        }
-        break
-      case 'generated':
-        uploadPath = `${session.user.id}/${UPLOAD_PATHS.generated}`
-        processingOptions = {
-          ...processingOptions,
-          ...STORAGE_CONFIG.processing.generated
-        }
-        break
-      default:
-        return NextResponse.json(
-          { error: 'Invalid upload type' },
-          { status: 400 }
+      }
+
+      // Use standardized upload method
+      let result: any
+      if (storage instanceof AWSS3Provider) {
+        result = await storage.uploadStandardized(
+          file,
+          session.user.id,
+          finalCategory,
+          {
+            ...processingOptions,
+            makePublic: true, // Files in generated/* are public per S3 policy
+            isVideo: file.type.startsWith('video/')
+          }
         )
+      } else {
+        // Fallback for other providers - construct path manually
+        const uploadPath = `generated/${session.user.id}/${finalCategory}`
+        result = await storage.upload(file, uploadPath, {
+          ...processingOptions,
+          makePublic: true
+        })
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          url: result.url,
+          key: result.key,
+          thumbnailUrl: result.thumbnailUrl,
+          originalName: result.originalName,
+          size: result.size,
+          mimeType: result.mimeType,
+          category: finalCategory,
+          structure: 'standardized'
+        }
+      })
+
+    } else {
+      // Legacy upload path (for backward compatibility)
+      let uploadPath: string
+
+      switch (uploadType) {
+        case 'face':
+          uploadPath = `${session.user.id}/training/face`
+          processingOptions = { ...processingOptions, ...STORAGE_CONFIG.processing.face }
+          break
+        case 'body':
+          uploadPath = `${session.user.id}/training/body`
+          processingOptions = { ...processingOptions, ...STORAGE_CONFIG.processing.body }
+          break
+        case 'generated':
+          uploadPath = `${session.user.id}/generated`
+          processingOptions = { ...processingOptions, ...STORAGE_CONFIG.processing.generated }
+          break
+        default:
+          return NextResponse.json(
+            { error: 'Invalid upload type for legacy structure' },
+            { status: 400 }
+          )
+      }
+
+      // Upload using legacy method
+      const result = await storage.upload(file, uploadPath, processingOptions)
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          url: result.url,
+          key: result.key,
+          thumbnailUrl: result.thumbnailUrl,
+          originalName: result.originalName,
+          size: result.size,
+          mimeType: result.mimeType,
+          structure: 'legacy'
+        }
+      })
     }
 
-    // Upload file
-    const result = await storage.upload(file, uploadPath, processingOptions)
-
-    // Log upload activity (you might want to store this in database)
-    console.log(`File uploaded by user ${session.user.id}:`, {
-      type: uploadType,
-      filename: result.originalName,
-      size: result.size,
-      url: result.url
-    })
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        url: result.url,
-        key: result.key,
-        thumbnailUrl: result.thumbnailUrl,
-        originalName: result.originalName,
-        size: result.size,
-        mimeType: result.mimeType
-      }
-    })
 
   } catch (error) {
     console.error('Upload error:', error)

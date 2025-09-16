@@ -7,6 +7,50 @@ import { getModelById } from '@/lib/db/models'
 import { getAIProvider } from '@/lib/ai'
 import { prisma } from '@/lib/db'
 
+// Helper functions for optimal generation parameters
+function calculateOptimalSteps(userPlan: string, megapixels: number, modelType: 'custom' | 'base'): number {
+  // Base steps by plan for quality (temporarily max quality for STARTER testing)
+  const planSteps = {
+    'STARTER': 40,  // Temporarily max quality for testing
+    'PREMIUM': 20,  // FLUX Dev - balanced
+    'GOLD': 28      // FLUX Pro - highest quality
+  }
+  
+  let baseSteps = planSteps[userPlan as keyof typeof planSteps] || 40
+  
+  // Increase steps for higher resolutions
+  if (megapixels > 2.25) {
+    baseSteps = Math.min(baseSteps + 12, 50) // Higher cap for very high res
+  } else if (megapixels > 1.5) {
+    baseSteps = Math.min(baseSteps + 8, 40) // Cap at 40 steps max
+  }
+  
+  // Custom models may need more steps for quality
+  if (modelType === 'custom') {
+    baseSteps = Math.min(baseSteps + 4, 35)
+  }
+  
+  return baseSteps
+}
+
+function calculateOptimalGuidance(userPlan: string, megapixels: number): number {
+  // Base guidance by plan (optimized for FLUX - max 5.0 to prevent over-saturation)
+  const planGuidance = {
+    'STARTER': 4.0,   // Optimized for FLUX - reduced from 5.5 to prevent artifacts
+    'PREMIUM': 4.0,   // FLUX Dev optimal - consistent with config
+    'GOLD': 4.5       // FLUX Pro for highest quality - capped at safe value
+  }
+  
+  let baseGuidance = planGuidance[userPlan as keyof typeof planGuidance] || 4.0
+  
+  // Slightly increase guidance for higher resolutions but cap at FLUX maximum (5.0)
+  if (megapixels > 1.5) {
+    baseGuidance = Math.min(baseGuidance + 0.5, 5.0) // FLUX maximum for quality
+  }
+  
+  return baseGuidance
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -28,7 +72,14 @@ export async function POST(request: NextRequest) {
       variations = 1,
       strength = 0.8,
       seed,
-      style = 'photographic'
+      style = 'photographic',
+      // FLUX-specific parameters
+      steps,
+      guidance_scale,
+      safety_tolerance,
+      raw_mode,
+      output_format,
+      output_quality
     } = body
 
     // Validate required fields
@@ -40,9 +91,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate prompt length
-    if (prompt.length > 500) {
+    if (prompt.length > 1500) {
       return NextResponse.json(
-        { error: 'Prompt must be 500 characters or less' },
+        { error: 'Prompt must be 1500 characters or less' },
         { status: 400 }
       )
     }
@@ -72,8 +123,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if user has enough credits
-    const creditsNeeded = variations
+    // Check if user has enough credits (10 credits per image generated)
+    const creditsNeeded = variations * 10
     const canUseCredits = await canUserUseCredits(session.user.id, creditsNeeded)
     
     if (!canUseCredits) {
@@ -108,7 +159,15 @@ export async function POST(request: NextRequest) {
       // Parse resolution
       const [width, height] = resolution.split('x').map(Number)
 
-      // Build generation request
+      // Get user plan from session for quality optimization
+      const userPlan = (session.user as any).plan || 'FREE'
+      
+      // Calculate optimal parameters based on resolution and user plan
+      const megapixels = (width * height) / (1024 * 1024)
+      const optimalSteps = calculateOptimalSteps(userPlan, megapixels, model.modelUrl ? 'custom' : 'base')
+      const optimalGuidance = calculateOptimalGuidance(userPlan, megapixels)
+      
+      // Build generation request with all FLUX parameters
       const generationRequest = {
         modelUrl: model.modelUrl!, // We know it's ready so modelUrl exists
         prompt,
@@ -116,12 +175,19 @@ export async function POST(request: NextRequest) {
         params: {
           width,
           height,
-          steps: 20, // Default FLUX steps
-          guidance_scale: 7.5,
+          // Core parameters (will be mapped based on model type)
+          steps: steps || optimalSteps,
+          guidance_scale: guidance_scale || optimalGuidance,
           num_outputs: variations,
-          seed: seed || Math.floor(Math.random() * 1000000)
+          seed: seed || Math.floor(Math.random() * 1000000),
+          // FLUX-specific parameters
+          safety_tolerance: safety_tolerance || 2,
+          raw_mode: raw_mode || false,
+          output_format: output_format || 'png',
+          output_quality: output_quality || 95
         },
-        webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/generation`
+        webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/replicate?type=generation&id=${generation.id}&userId=${session.user.id}`,
+        userPlan // Pass user plan for model selection
       }
 
       console.log(`🚀 Sending generation request to AI provider...`)
@@ -143,17 +209,45 @@ export async function POST(request: NextRequest) {
     } catch (generationError) {
       console.error('❌ Error starting generation:', generationError)
       
-      // Update generation status to failed
+      // Detailed error logging for debugging
+      if (generationError instanceof Error) {
+        console.error('Error details:', {
+          message: generationError.message,
+          stack: generationError.stack,
+          modelId: model.id,
+          modelUrl: model.modelUrl,
+          userId: session.user.id,
+          prompt: prompt.substring(0, 100)
+        })
+      }
+      
+      // Update generation status to failed with detailed error
+      const errorMessage = generationError instanceof Error 
+        ? generationError.message 
+        : 'Unknown error occurred during generation startup'
+      
       await prisma.generation.update({
         where: { id: generation.id },
         data: {
           status: 'FAILED',
-          errorMessage: generationError instanceof Error ? generationError.message : 'Generation failed to start'
+          errorMessage,
+          completedAt: new Date()
         }
       })
       
       // Refund credits since generation failed
       await updateUserCredits(session.user.id, -creditsNeeded)
+      
+      // Return specific error instead of generic one
+      return NextResponse.json({
+        success: false,
+        error: `Generation failed: ${errorMessage}`,
+        details: {
+          errorType: 'GENERATION_START_ERROR',
+          modelStatus: model.status,
+          hasModelUrl: !!model.modelUrl
+        }
+      }, { status: 500 })
     }
 
     return NextResponse.json({

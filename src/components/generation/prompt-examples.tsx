@@ -15,59 +15,59 @@ export function PromptExamples({ modelClass, onPromptSelect }: PromptExamplesPro
     const basePrompts = {
       MAN: [
         {
-          category: 'Professional',
+          category: 'Profissional',
           prompts: [
-            'professional business headshot, wearing suit and tie, confident smile, office background, studio lighting',
-            'corporate executive portrait, modern office setting, natural lighting, professional attire',
-            'LinkedIn profile photo, business casual, clean background, sharp focus'
+            'Ultra realistic professional business headshot, wearing suit and tie, confident smile, office background, studio lighting, sharp focus, 85mm lens, RAW photo style',
+            'Professional corporate portrait, wearing elegant suit, confident expression, modern office background, natural window light, shallow depth of field, 50mm lens, RAW photo style',
+            'Ultra realistic LinkedIn profile photo, business casual outfit, approachable smile, clean neutral background, sharp focus, studio lighting, 85mm lens, RAW photo style'
           ]
         },
         {
           category: 'Casual',
           prompts: [
-            'casual outdoor portrait, wearing jeans and t-shirt, natural smile, park background',
-            'relaxed weekend look, coffee shop setting, warm lighting, approachable expression',
-            'vacation photo, beach background, casual summer clothes, candid smile'
+            'Ultra realistic casual outdoor portrait, wearing jeans and t-shirt, natural smile, park background with greenery, soft daylight, Sony A7R IV, 50mm lens, RAW photo style',
+            'Ultra realistic candid photo in a cozy coffee shop, relaxed weekend look, casual modern outfit, holding a coffee cup, warm golden daylight through windows, approachable smile, natural posture, cinematic depth of field, Canon 5D with 50mm lens, RAW photo style',
+            'Ultra realistic vacation photo at the beach, wearing casual summer clothes, candid smile, ocean and sand background, golden hour sunlight, natural outdoor lighting, Nikon Z7 II, 35mm lens, RAW photo style'
           ]
         },
         {
-          category: 'Artistic',
+          category: 'Artístico',
           prompts: [
-            'dramatic portrait with strong shadows, black and white photography, artistic lighting',
-            'creative headshot with colorful background, modern studio setup, dynamic pose',
-            'cinematic portrait, moody lighting, film photography style'
+            'Ultra realistic dramatic portrait, black and white photography, strong artistic lighting with deep shadows, high contrast tones, sharp focus, studio setting, shot on Leica M10 Monochrom, 50mm lens, RAW photo style',
+            'Ultra realistic creative headshot, colorful gradient studio background, modern lighting setup, dynamic natural pose, sharp focus, vibrant tones, shot on Canon EOS R5, 85mm lens, RAW photo style',
+            'Ultra realistic cinematic portrait, moody atmospheric lighting, film photography style with subtle grain, soft depth of field, high contrast, shot on Arri Alexa 65, 50mm lens, RAW photo style'
           ]
         }
       ],
-      WOMAN: [
+      MULHER: [
         {
-          category: 'Professional',
+          category: 'Profissional',
           prompts: [
-            'professional businesswoman portrait, elegant blouse, confident pose, office environment',
-            'executive headshot, modern business attire, natural makeup, studio lighting',
-            'corporate profile photo, professional styling, clean background'
+            'Ultra realistic professional business headshot, woman wearing elegant suit and blouse, confident smile, modern office background, studio lighting, sharp focus, 85mm lens, RAW photo style',
+            'Professional corporate portrait, woman in sophisticated business attire, natural makeup, confident expression, modern office background, natural window light, shallow depth of field, 50mm lens, RAW photo style',
+            'Ultra realistic LinkedIn profile photo, woman in business casual outfit, approachable smile, clean neutral background, professional styling, sharp focus, studio lighting, 85mm lens, RAW photo style'
           ]
         },
         {
-          category: 'Fashion',
+          category: 'Moda',
           prompts: [
-            'fashion portrait, elegant dress, sophisticated pose, studio lighting',
-            'glamour photography, evening wear, dramatic makeup, luxurious background',
-            'lifestyle fashion shot, trendy outfit, urban background, natural light'
+            'Ultra realistic fashion portrait, woman wearing elegant evening dress, sophisticated pose, dramatic studio lighting, shallow depth of field, Canon EOS R5, 85mm lens, RAW photo style',
+            'Ultra realistic glamour photography, woman in luxury evening wear, dramatic makeup with subtle highlights, luxurious background with soft bokeh, professional lighting setup, shot on Sony A7R IV, 50mm lens, RAW photo style',
+            'Ultra realistic lifestyle fashion shot, woman in trendy modern outfit, confident pose, urban background with natural lighting, golden hour sunlight, candid expression, Nikon Z7 II, 35mm lens, RAW photo style'
           ]
         },
         {
           category: 'Casual',
           prompts: [
-            'casual lifestyle portrait, comfortable clothes, natural smile, home setting',
-            'outdoor casual photo, summer dress, garden background, golden hour lighting',
-            'coffee shop portrait, cozy sweater, warm atmosphere, candid expression'
+            'Ultra realistic casual lifestyle portrait, woman wearing comfortable stylish clothes, natural genuine smile, cozy home setting with warm lighting, soft daylight, Sony A7R IV, 50mm lens, RAW photo style',
+            'Ultra realistic outdoor casual photo, woman in beautiful summer dress, relaxed pose, garden background with greenery, golden hour lighting, natural outdoor setting, Canon 5D with 50mm lens, RAW photo style',
+            'Ultra realistic coffee shop portrait, woman in cozy sweater, holding a coffee cup, warm atmosphere with soft window light, candid natural expression, comfortable posture, Nikon Z7 II, 35mm lens, RAW photo style'
           ]
         }
       ],
       BOY: [
         {
-          category: 'Playful',
+          category: 'Brincação',
           prompts: [
             'young boy playing in park, casual clothes, joyful expression, outdoor setting',
             'school portrait, neat uniform, friendly smile, classroom background',
@@ -75,7 +75,7 @@ export function PromptExamples({ modelClass, onPromptSelect }: PromptExamplesPro
           ]
         },
         {
-          category: 'Sports',
+          category: 'Esportes',
           prompts: [
             'youth athlete portrait, sports uniform, confident pose, field background',
             'soccer player action shot, team jersey, dynamic pose, stadium setting',
@@ -85,7 +85,7 @@ export function PromptExamples({ modelClass, onPromptSelect }: PromptExamplesPro
       ],
       GIRL: [
         {
-          category: 'Portrait',
+          category: 'Retrato',
           prompts: [
             'young girl portrait, pretty dress, sweet smile, garden background',
             'school photo, neat uniform, friendly expression, classroom setting',
@@ -93,7 +93,7 @@ export function PromptExamples({ modelClass, onPromptSelect }: PromptExamplesPro
           ]
         },
         {
-          category: 'Activities',
+          category: 'Atividades',
           prompts: [
             'dancing portrait, ballet outfit, graceful pose, studio setting',
             'art class photo, creative expression, colorful background, focused look',
@@ -103,7 +103,7 @@ export function PromptExamples({ modelClass, onPromptSelect }: PromptExamplesPro
       ],
       ANIMAL: [
         {
-          category: 'Pet Portrait',
+          category: 'Retrato Pet',
           prompts: [
             'professional pet portrait, sitting pose, studio lighting, clean background',
             'outdoor pet photo, natural environment, playful expression, golden hour',
@@ -111,7 +111,7 @@ export function PromptExamples({ modelClass, onPromptSelect }: PromptExamplesPro
           ]
         },
         {
-          category: 'Action',
+          category: 'Ação',
           prompts: [
             'pet in action, running or jumping, outdoor setting, motion blur background',
             'playing pet photo, toy or ball, garden setting, joyful expression',
@@ -131,7 +131,7 @@ export function PromptExamples({ modelClass, onPromptSelect }: PromptExamplesPro
       <CardHeader>
         <CardTitle className="flex items-center">
           <Sparkles className="w-5 h-5 mr-2" />
-          Prompt Examples
+          Exemplos de Descrição
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -161,7 +161,7 @@ export function PromptExamples({ modelClass, onPromptSelect }: PromptExamplesPro
                         onClick={() => onPromptSelect(prompt)}
                         className="h-7 px-3 text-xs"
                       >
-                        Use Prompt
+                        Usar Prompt
                       </Button>
                       
                       <Button
@@ -175,7 +175,7 @@ export function PromptExamples({ modelClass, onPromptSelect }: PromptExamplesPro
                     </div>
                     
                     <div className="text-xs text-gray-500">
-                      {prompt.split(' ').length} words
+                      {prompt.split(' ').length} palavras
                     </div>
                   </div>
                 </div>
@@ -186,12 +186,12 @@ export function PromptExamples({ modelClass, onPromptSelect }: PromptExamplesPro
 
         {/* Tips */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
-          <h4 className="font-medium text-blue-900 mb-2">💡 How to Use Examples</h4>
+          <h4 className="font-medium text-blue-900 mb-2">💡 Como Usar os Exemplos</h4>
           <div className="text-sm text-blue-800 space-y-1">
-            <p>• Click "Use Prompt" to copy an example to the prompt field</p>
-            <p>• Modify examples to match your specific vision</p>
-            <p>• Combine elements from different examples</p>
-            <p>• Add your own creative details and specifications</p>
+            <p>• Clique em "Usar Prompt" para copiar um exemplo para o campo</p>
+            <p>• Modifique exemplos para combinar com sua visão específica</p>
+            <p>• Combine elementos de diferentes exemplos</p>
+            <p>• Adicione seus próprios detalhes criativos e especificações</p>
           </div>
         </div>
       </CardContent>

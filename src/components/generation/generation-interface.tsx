@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
+import { useToast } from '@/hooks/use-toast'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -24,6 +26,7 @@ import { PromptInput } from './prompt-input'
 import { GenerationSettings } from './generation-settings'
 import { ResultsGallery } from './results-gallery'
 import { PromptExamples } from './prompt-examples'
+import { ImageModal } from '@/components/gallery/image-modal'
 
 interface GenerationInterfaceProps {
   models: Array<{
@@ -57,13 +60,88 @@ export function GenerationInterface({
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [currentGeneration, setCurrentGeneration] = useState<any>(null)
   
+  // Success modal states
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [successImageUrl, setSuccessImageUrl] = useState<string | null>(null)
+  
+  // Toast notifications
+  const { addToast } = useToast()
+
+  // Real-time updates for generation status
+  useRealtimeUpdates({
+    onGenerationStatusChange: (generationId, status, data) => {
+      console.log(`🔄 Real-time generation update: ${generationId} -> ${status}`)
+      
+      // Update current generation if it matches
+      if (currentGeneration?.id === generationId) {
+        setCurrentGeneration((prev: any) => ({
+          ...prev,
+          status,
+          imageUrls: data.imageUrls || prev.imageUrls,
+          thumbnailUrls: data.thumbnailUrls || prev.thumbnailUrls,
+          processingTime: data.processingTime || prev.processingTime,
+          errorMessage: data.errorMessage || prev.errorMessage
+        }))
+
+        // If completed successfully, add to results and show modal
+        if (status === 'COMPLETED' && data.imageUrls && data.imageUrls.length > 0) {
+          const completedGeneration = { ...currentGeneration, ...data, status }
+          
+          setGenerationResults(prevResults => [
+            completedGeneration,
+            ...prevResults
+          ])
+          
+          // Show success toast
+          addToast({
+            type: 'success',
+            title: 'Imagem gerada com sucesso!',
+            description: `${data.imageUrls.length} imagem${data.imageUrls.length > 1 ? 's' : ''} criada${data.imageUrls.length > 1 ? 's' : ''} em ${Math.round((data.processingTime || 30000) / 1000)}s`,
+            duration: 4000
+          })
+          
+          // Automatically open success modal with first image
+          setTimeout(() => {
+            setSuccessImageUrl(data.imageUrls[0])
+            setShowSuccessModal(true)
+            console.log('🎉 Opening success modal for generated image')
+          }, 500) // Small delay for better UX
+        }
+
+        // Show error message if failed
+        if (status === 'FAILED') {
+          const errorMessage = data.errorMessage || 'Erro desconhecido na geração'
+          addToast({
+            type: 'error',
+            title: 'Falha na geração de imagem',
+            description: errorMessage,
+            duration: 6000
+          })
+        }
+      }
+    },
+    onConnect: () => {
+      console.log('✅ Connected to real-time updates')
+    },
+    onDisconnect: () => {
+      console.log('❌ Disconnected from real-time updates')
+    }
+  })
+  
   const [settings, setSettings] = useState({
     aspectRatio: '1:1',
     resolution: '512x512',
     variations: 1,
     strength: 0.8,
     seed: undefined as number | undefined,
-    style: 'photographic'
+    style: 'photographic',
+    // FLUX parameters
+    steps: undefined as number | undefined,
+    guidance_scale: undefined as number | undefined,
+    raw_mode: false,
+    output_quality: 95,
+    safety_tolerance: 2,
+    output_format: 'jpg'
   })
 
   const selectedModelData = models.find(m => m.id === selectedModel)
@@ -84,61 +162,50 @@ export function GenerationInterface({
           modelId: selectedModel,
           prompt: prompt.trim(),
           negativePrompt: negativePrompt.trim() || undefined,
-          ...settings
+          ...settings,
+          // Ensure FLUX parameters are passed through
+          steps: settings.steps,
+          guidance_scale: settings.guidance_scale,
+          raw_mode: settings.raw_mode,
+          output_quality: settings.output_quality,
+          safety_tolerance: settings.safety_tolerance,
+          output_format: settings.output_format
         }),
       })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
 
       const data = await response.json()
 
       if (data.success) {
         setCurrentGeneration(data.generation)
-        // Poll for results
-        pollGenerationStatus(data.generation.id)
+        // Real-time updates will handle status changes via SSE
+        console.log('🚀 Generation started, waiting for real-time updates...')
       } else {
-        alert(data.error || 'Failed to start generation')
+        // Display detailed error message
+        const errorMessage = data.error || 'Falha ao iniciar geração'
+        const errorDetails = data.details ? 
+          `\n\nDetalhes: ${data.details.errorType}\nStatus do modelo: ${data.details.modelStatus}\nTem URL do modelo: ${data.details.hasModelUrl ? 'Sim' : 'Não'}` : ''
+        
+        console.error('Generation failed:', {
+          error: data.error,
+          details: data.details,
+          modelId: selectedModel,
+          prompt: prompt.substring(0, 100)
+        })
+        alert(errorMessage + errorDetails)
       }
     } catch (error) {
-      alert('Error starting generation')
+      console.error('Generation request error:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
+      alert(`Erro ao iniciar geração: ${errorMessage}`)
     } finally {
       setIsGenerating(false)
     }
   }
 
-  const pollGenerationStatus = async (generationId: string) => {
-    const maxAttempts = 60 // 5 minutes
-    let attempts = 0
-
-    const poll = async () => {
-      try {
-        const response = await fetch(`/api/generations/${generationId}`)
-        const data = await response.json()
-
-        if (data.generation) {
-          setCurrentGeneration(data.generation)
-
-          if (data.generation.status === 'COMPLETED') {
-            setGenerationResults(prev => [data.generation, ...prev])
-            return
-          }
-
-          if (data.generation.status === 'FAILED') {
-            alert('Generation failed: ' + (data.generation.errorMessage || 'Unknown error'))
-            return
-          }
-
-          // Continue polling if still processing
-          if (data.generation.status === 'PROCESSING' && attempts < maxAttempts) {
-            attempts++
-            setTimeout(poll, 5000) // Poll every 5 seconds
-          }
-        }
-      } catch (error) {
-        console.error('Error polling generation status:', error)
-      }
-    }
-
-    poll()
-  }
 
   const handlePromptSelect = (selectedPrompt: string) => {
     setPrompt(selectedPrompt)
@@ -176,11 +243,11 @@ export function GenerationInterface({
           }
         }
       } else {
-        alert(data.error || 'Failed to sync generation status')
+        alert(data.error || 'Falha ao sincronizar status da geração')
       }
     } catch (error) {
       console.error('Error syncing generation:', error)
-      alert('Error syncing generation status')
+      alert('Erro ao sincronizar status da geração')
     }
   }
 
@@ -196,10 +263,10 @@ export function GenerationInterface({
           <CardHeader>
             <CardTitle className="flex items-center">
               <Sparkles className="w-5 h-5 mr-2" />
-              Select AI Model
+              Selecionar Modelo de IA
             </CardTitle>
             <CardDescription>
-              Choose which AI model to use for generation
+              Escolha qual modelo de IA usar para geração
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -214,9 +281,9 @@ export function GenerationInterface({
         {/* Prompt Input */}
         <Card>
           <CardHeader>
-            <CardTitle>Describe Your Photo</CardTitle>
+            <CardTitle>Descreva sua Foto</CardTitle>
             <CardDescription>
-              Write a detailed description of the photo you want to create
+              Escreva uma descrição detalhada da foto que deseja criar
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -239,7 +306,7 @@ export function GenerationInterface({
             >
               <div className="flex items-center">
                 <Settings className="w-5 h-5 mr-2" />
-                Advanced Settings
+                Configurações Avançadas
               </div>
               {showAdvanced ? (
                 <ChevronUp className="w-5 h-5" />
@@ -249,7 +316,7 @@ export function GenerationInterface({
             </CardTitle>
             {showAdvanced && (
               <CardDescription>
-                Fine-tune your generation parameters
+                Ajuste fino dos parâmetros de geração
               </CardDescription>
             )}
           </CardHeader>
@@ -270,9 +337,9 @@ export function GenerationInterface({
             <div className="text-center space-y-4">
               {!canUseCredits && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-                  <p className="text-red-800 font-medium">Credits Limit Reached</p>
+                  <p className="text-red-800 font-medium">Limite de Créditos Atingido</p>
                   <p className="text-red-700 text-sm">
-                    You've used all your credits for this month. Upgrade your plan to continue generating.
+                    Você usou todos os seus créditos este mês. Faça upgrade do seu plano para continuar gerando.
                   </p>
                 </div>
               )}
@@ -280,15 +347,15 @@ export function GenerationInterface({
               <div className="flex items-center justify-center space-x-6">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-purple-600">{settings.variations}</div>
-                  <div className="text-sm text-gray-600">variations</div>
+                  <div className="text-sm text-gray-600">variações</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-purple-600">{settings.variations}</div>
-                  <div className="text-sm text-gray-600">credits</div>
+                  <div className="text-sm text-gray-600">créditos</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-purple-600">{creditsRemaining}</div>
-                  <div className="text-sm text-gray-600">remaining</div>
+                  <div className="text-sm text-gray-600">restantes</div>
                 </div>
               </div>
 
@@ -301,12 +368,12 @@ export function GenerationInterface({
                 {isGenerating ? (
                   <>
                     <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
-                    Generating...
+                    Gerando...
                   </>
                 ) : (
                   <>
                     <Play className="w-5 h-5 mr-2" />
-                    Generate {settings.variations} Photo{settings.variations > 1 ? 's' : ''}
+                    Gerar {settings.variations} Foto{settings.variations > 1 ? 's' : ''}
                   </>
                 )}
               </Button>
@@ -314,12 +381,12 @@ export function GenerationInterface({
               {!canGenerate && !isGenerating && (
                 <p className="text-sm text-gray-600">
                   {!prompt.trim() 
-                    ? 'Enter a prompt to generate photos'
+                    ? 'Digite um prompt para gerar fotos'
                     : !canUseCredits 
-                    ? 'Credit limit reached'
+                    ? 'Limite de créditos atingido'
                     : creditsRemaining < settings.variations
-                    ? `Need ${settings.variations} credits (you have ${creditsRemaining})`
-                    : 'Ready to generate'
+                    ? `Precisa de ${settings.variations} créditos (você tem ${creditsRemaining})`
+                    : 'Pronto para gerar'
                   }
                 </p>
               )}
@@ -334,7 +401,7 @@ export function GenerationInterface({
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold text-blue-900">
-                    {currentGeneration.status === 'PROCESSING' ? 'Generating Photos...' : 'Generation Complete!'}
+                    {currentGeneration.status === 'PROCESSING' ? 'Gerando Fotos...' : 'Geração Completa!'}
                   </h3>
                   <p className="text-blue-700 text-sm truncate max-w-md">
                     {currentGeneration.prompt}
@@ -349,18 +416,18 @@ export function GenerationInterface({
                       className="text-blue-600 border-blue-300 hover:bg-blue-50"
                     >
                       <RefreshCw className="w-3 h-3 mr-1" />
-                      Sync
+                      Sincronizar
                     </Button>
                   )}
                   <div className="text-right">
                     {currentGeneration.status === 'PROCESSING' ? (
                       <div className="flex items-center text-blue-600">
                         <Clock className="w-4 h-4 mr-1 animate-pulse" />
-                        <span className="text-sm">~30 seconds</span>
+                        <span className="text-sm">~30 segundos</span>
                       </div>
                     ) : (
                       <Badge variant="default">
-                        {currentGeneration.imageUrls?.length || 0} images
+                        {currentGeneration.imageUrls?.length || 0} imagens
                       </Badge>
                     )}
                   </div>
@@ -373,50 +440,6 @@ export function GenerationInterface({
 
       {/* Right Column - Examples and Results */}
       <div className="space-y-6">
-        {/* Model Info */}
-        {selectedModelData && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">{selectedModelData.name}</CardTitle>
-              <CardDescription className="capitalize">
-                {selectedModelData.class.toLowerCase()} model
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {selectedModelData.qualityScore && (
-                <div className="mb-4">
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Quality Score</span>
-                    <span>{Math.round(selectedModelData.qualityScore * 100)}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                    <div
-                      className="bg-green-600 h-2 rounded-full"
-                      style={{ width: `${selectedModelData.qualityScore * 100}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-              
-              {selectedModelData.sampleImages.length > 0 && (
-                <div>
-                  <p className="text-sm text-gray-600 mb-2">Sample Results</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {selectedModelData.sampleImages.slice(0, 4).map((image: string, index: number) => (
-                      <div key={index} className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                        <img
-                          src={image}
-                          alt={`Sample ${index + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
 
         {/* Prompt Examples */}
         <PromptExamples 
@@ -430,7 +453,7 @@ export function GenerationInterface({
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Image className="w-5 h-5 mr-2" />
-                Recent Results
+                Resultados Recentes
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -439,43 +462,19 @@ export function GenerationInterface({
           </Card>
         )}
 
-        {/* Credits Info */}
-        <Card className="bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
-          <CardHeader>
-            <CardTitle className="flex items-center text-yellow-800">
-              <Zap className="w-5 h-5 mr-2" />
-              Credits Usage
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-yellow-700">Used this month</span>
-                <span className="font-semibold text-yellow-900">
-                  {user.creditsUsed}/{user.creditsLimit}
-                </span>
-              </div>
-              
-              <div className="w-full bg-yellow-200 rounded-full h-2">
-                <div
-                  className="bg-yellow-600 h-2 rounded-full"
-                  style={{ 
-                    width: `${Math.min((user.creditsUsed / user.creditsLimit) * 100, 100)}%` 
-                  }}
-                />
-              </div>
-
-              <div className="text-sm text-yellow-700 space-y-1">
-                <p>• Each generation costs 1 credit per variation</p>
-                <p>• Credits reset monthly on your billing cycle</p>
-                {user.plan === 'FREE' && (
-                  <p>• Upgrade to Premium for 100 credits/month</p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
+
+      {/* Success Modal */}
+      {showSuccessModal && successImageUrl && (
+        <ImageModal
+          imageUrl={successImageUrl}
+          onClose={() => {
+            setShowSuccessModal(false)
+            setSuccessImageUrl(null)
+          }}
+          generations={generationResults}
+        />
+      )}
     </div>
   )
 }

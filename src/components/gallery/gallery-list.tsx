@@ -15,25 +15,34 @@ import {
   Check,
   Image,
   Calendar,
-  User
+  User,
+  Edit2,
+  ZoomIn
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { MediaItem } from '@/types'
 
 interface GalleryListProps {
-  generations: any[]
+  mediaItems?: MediaItem[]
+  generations?: any[] // Keep for backward compatibility
   bulkSelectMode: boolean
   selectedImages: string[]
   onImageSelect: (imageUrl: string) => void
   onImageClick: (imageUrl: string) => void
+  onUpscale?: (imageUrl: string, generation?: any) => void
 }
 
-export function GalleryList({ 
-  generations, 
-  bulkSelectMode, 
-  selectedImages, 
-  onImageSelect, 
-  onImageClick 
+export function GalleryList({
+  mediaItems = [],
+  generations = [], // Fallback for backward compatibility
+  bulkSelectMode,
+  selectedImages,
+  onImageSelect,
+  onImageClick,
+  onUpscale
 }: GalleryListProps) {
+  // Use mediaItems if provided, otherwise fall back to generations
+  const items = mediaItems.length > 0 ? mediaItems : generations
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'COMPLETED':
@@ -85,29 +94,43 @@ export function GalleryList({
       case 'favorite':
         console.log('Favorite:', imageUrl)
         break
+      case 'edit':
+        window.location.href = `/editor?image=${encodeURIComponent(imageUrl)}`
+        break
+      case 'upscale':
+        onUpscale?.(imageUrl, generation)
+        break
     }
   }
 
   return (
     <div className="space-y-4">
-      {generations.map((generation) => (
-        <Card key={generation.id} className="overflow-hidden">
+      {items.map((item) => {
+        // Handle both MediaItem and legacy generation formats
+        const generation = item.generation || item
+        const imageUrl = item.url || item.imageUrls?.[0]
+        const thumbnailUrl = item.thumbnailUrl || item.thumbnailUrls?.[0] || imageUrl
+        const status = item.status || generation.status
+        const prompt = generation.prompt || 'No prompt available'
+
+        return (
+        <Card key={item.id || generation.id} className="overflow-hidden">
           <CardContent className="p-6">
             <div className="flex items-start space-x-4">
               {/* Thumbnail Preview */}
               <div className="flex-shrink-0">
-                {generation.status === 'COMPLETED' && generation.imageUrls.length > 0 ? (
+                {status === 'COMPLETED' && imageUrl ? (
                   <div className="relative group">
                     <div className="w-24 h-24 bg-gray-100 rounded-lg overflow-hidden">
                       <img
-                        src={generation.thumbnailUrls?.[0] || generation.imageUrls[0]}
+                        src={thumbnailUrl}
                         alt="Generation preview"
                         className="w-full h-full object-cover cursor-pointer transition-transform group-hover:scale-105"
-                        onClick={() => onImageClick(generation.imageUrls[0])}
+                        onClick={() => onImageClick(imageUrl)}
                       />
                     </div>
                     
-                    {generation.imageUrls.length > 1 && (
+                    {generation.imageUrls && generation.imageUrls.length > 1 && (
                       <Badge variant="secondary" className="absolute -bottom-1 -right-1 text-xs">
                         +{generation.imageUrls.length - 1}
                       </Badge>
@@ -115,20 +138,20 @@ export function GalleryList({
                     
                     {bulkSelectMode && (
                       <button
-                        onClick={() => onImageSelect(generation.imageUrls[0])}
+                        onClick={() => onImageSelect(imageUrl)}
                         className={`absolute top-1 left-1 w-5 h-5 rounded border flex items-center justify-center ${
-                          selectedImages.includes(generation.imageUrls[0])
+                          selectedImages.includes(imageUrl)
                             ? 'bg-purple-600 border-purple-600 text-white'
                             : 'bg-white border-gray-300'
                         }`}
                       >
-                        {selectedImages.includes(generation.imageUrls[0]) && (
+                        {selectedImages.includes(imageUrl) && (
                           <Check className="w-3 h-3" />
                         )}
                       </button>
                     )}
                   </div>
-                ) : generation.status === 'PROCESSING' ? (
+                ) : status === 'PROCESSING' ? (
                   <div className="w-24 h-24 bg-gray-100 rounded-lg flex items-center justify-center">
                     <Clock className="w-6 h-6 text-gray-400 animate-pulse" />
                   </div>
@@ -143,9 +166,9 @@ export function GalleryList({
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center space-x-2">
-                    {getStatusIcon(generation.status)}
-                    <Badge variant="secondary" className={getStatusColor(generation.status)}>
-                      {generation.status}
+                    {getStatusIcon(status)}
+                    <Badge variant="secondary" className={getStatusColor(status)}>
+                      {status}
                     </Badge>
                   </div>
                   
@@ -160,7 +183,7 @@ export function GalleryList({
                 </div>
 
                 <h3 className="font-medium text-gray-900 mb-2 line-clamp-2">
-                  {generation.prompt}
+                  {prompt}
                 </h3>
 
                 <div className="flex items-center space-x-4 text-sm text-gray-500 mb-3">
@@ -209,21 +232,41 @@ export function GalleryList({
                 </div>
 
                 {/* Actions */}
-                {generation.status === 'COMPLETED' && generation.imageUrls.length > 0 && (
+                {status === 'COMPLETED' && imageUrl && (
                   <div className="flex items-center space-x-2">
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => onImageClick(generation.imageUrls[0])}
+                      onClick={() => onImageClick(imageUrl)}
                     >
                       <Eye className="w-4 h-4 mr-1" />
-                      View All ({generation.imageUrls.length})
+                      View All ({generation.imageUrls?.length || 1})
                     </Button>
                     
                     <Button
                       size="sm"
+                      className="bg-blue-600 text-white hover:bg-blue-700 border-blue-600"
+                      onClick={() => handleImageAction('edit', imageUrl, generation)}
+                    >
+                      <Edit2 className="w-4 h-4 mr-1" />
+                      Editar
+                    </Button>
+                    
+                    {onUpscale && (
+                      <Button
+                        size="sm"
+                        className="bg-green-600 text-white hover:bg-green-700 border-green-600"
+                        onClick={() => handleImageAction('upscale', imageUrl, generation)}
+                      >
+                        <ZoomIn className="w-4 h-4 mr-1" />
+                        Upscale
+                      </Button>
+                    )}
+                    
+                    <Button
+                      size="sm"
                       variant="outline"
-                      onClick={() => handleImageAction('download', generation.imageUrls[0], generation)}
+                      onClick={() => handleImageAction('download', imageUrl, generation)}
                     >
                       <Download className="w-4 h-4 mr-1" />
                       Download
@@ -232,7 +275,7 @@ export function GalleryList({
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleImageAction('favorite', generation.imageUrls[0], generation)}
+                      onClick={() => handleImageAction('favorite', imageUrl, generation)}
                     >
                       <Heart className="w-4 h-4 mr-1" />
                       Save
@@ -241,7 +284,7 @@ export function GalleryList({
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleImageAction('share', generation.imageUrls[0], generation)}
+                      onClick={() => handleImageAction('share', imageUrl, generation)}
                     >
                       <Share2 className="w-4 h-4 mr-1" />
                       Share
@@ -249,14 +292,14 @@ export function GalleryList({
                   </div>
                 )}
 
-                {generation.status === 'PROCESSING' && (
+                {status === 'PROCESSING' && (
                   <div className="flex items-center text-yellow-600">
                     <Clock className="w-4 h-4 mr-2 animate-pulse" />
                     <span className="text-sm">Generating... (~30 seconds remaining)</span>
                   </div>
                 )}
 
-                {generation.status === 'FAILED' && (
+                {status === 'FAILED' && (
                   <div className="flex items-center space-x-2">
                     <div className="flex items-center text-red-600">
                       <AlertCircle className="w-4 h-4 mr-2" />
@@ -270,12 +313,12 @@ export function GalleryList({
               </div>
 
               {/* Image Grid */}
-              {generation.status === 'COMPLETED' && generation.imageUrls.length > 1 && (
+              {status === 'COMPLETED' && generation.imageUrls && generation.imageUrls.length > 1 && (
                 <div className="flex-shrink-0 hidden md:block">
                   <div className="grid grid-cols-2 gap-1 w-20">
                     {generation.imageUrls.slice(1, 5).map((imageUrl: string, index: number) => (
                       <div
-                        key={index}
+                        key={`${generation.id}-thumb-${index + 1}`}
                         className="aspect-square bg-gray-100 rounded overflow-hidden cursor-pointer"
                         onClick={() => onImageClick(imageUrl)}
                       >
@@ -292,7 +335,8 @@ export function GalleryList({
             </div>
           </CardContent>
         </Card>
-      ))}
+        )
+      })}
     </div>
   )
 }

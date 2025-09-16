@@ -22,14 +22,19 @@ export const STORAGE_CONFIG = {
   // File upload constraints
   limits: {
     maxFileSize: 10 * 1024 * 1024, // 10MB
+    maxVideoSize: 100 * 1024 * 1024, // 100MB for videos
     maxFiles: 20,
     allowedMimeTypes: [
       'image/jpeg',
       'image/jpg', 
       'image/png',
-      'image/webp'
+      'image/webp',
+      'video/mp4',
+      'video/webm',
+      'video/avi',
+      'video/mov'
     ],
-    allowedExtensions: ['.jpg', '.jpeg', '.png', '.webp']
+    allowedExtensions: ['.jpg', '.jpeg', '.png', '.webp', '.mp4', '.webm', '.avi', '.mov']
   },
   
   // Image processing settings
@@ -70,7 +75,49 @@ export const UPLOAD_PATHS = {
     face: 'training/face',
     body: 'training/body'
   },
-  generated: 'generated',
-  thumbnails: 'thumbnails',
+  // New standardized structure: generated/{userId}/{category}/
+  generated: {
+    images: 'generated/{userId}/images',
+    videos: 'generated/{userId}/videos',
+    edited: 'generated/{userId}/edited',
+    upscaled: 'generated/{userId}/upscaled',
+    thumbnails: 'generated/{userId}/thumbnails'
+  },
+  // Legacy paths (to be migrated)
+  legacy: {
+    generated: 'generated',
+    videos: 'videos',
+    thumbnails: 'thumbnails'
+  },
   temp: 'temp'
 } as const
+
+// Valid categories for standardized uploads
+export const VALID_UPLOAD_CATEGORIES = [
+  'images',
+  'videos',
+  'edited',
+  'upscaled',
+  'thumbnails'
+] as const
+
+export type UploadCategory = typeof VALID_UPLOAD_CATEGORIES[number]
+
+/**
+ * Validate if upload category is allowed
+ * @param category Category to validate
+ * @returns boolean indicating if category is valid
+ */
+export function isValidUploadCategory(category: string): category is UploadCategory {
+  return VALID_UPLOAD_CATEGORIES.includes(category as UploadCategory)
+}
+
+/**
+ * Get standardized upload path for category
+ * @param userId User ID
+ * @param category Upload category
+ * @returns Standardized path
+ */
+export function getStandardizedUploadPath(userId: string, category: UploadCategory): string {
+  return `generated/${userId}/${category}`
+}

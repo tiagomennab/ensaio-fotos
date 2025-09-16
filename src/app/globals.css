@@ -158,6 +158,21 @@
     }
   }
 
+  @keyframes glowPulse {
+    0%, 100% {
+      opacity: 0.3;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.8;
+      transform: scale(1.05);
+    }
+  }
+
+  .animate-glow-pulse {
+    animation: glowPulse 2s ease-in-out infinite;
+  }
+
   /* VibePhoto Navigation Effects - Dark Active Button Style */
   .nav-item-active, .active {
     position: relative;

@@ -82,24 +82,36 @@ export function ConsentModal({ isOpen, onClose, onConsentGiven }: ConsentModalPr
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <CardHeader className="relative">
+      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border-0">
+        <CardHeader className="relative bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white rounded-t-lg">
           <button
             onClick={onClose}
-            className="absolute right-4 top-4 p-1 hover:bg-gray-100 rounded"
+            className="absolute right-4 top-4 p-1 hover:bg-white/20 rounded transition-colors"
             aria-label="Fechar"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4 text-white" />
           </button>
           
-          <div className="flex items-center gap-2 mb-2">
-            <Shield className="w-5 h-5 text-blue-600" />
-            <Badge variant="secondary">LGPD</Badge>
+          {/* VibePhoto Logo */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg">
+              <div className="w-6 h-6 bg-gradient-to-br from-[#667eea] to-[#764ba2] rounded-full flex flex-col items-center justify-center gap-0.5">
+                <div className="w-3 h-0.5 bg-white rounded opacity-90"></div>
+                <div className="w-2.5 h-0.5 bg-white rounded opacity-90"></div>
+                <div className="w-2 h-0.5 bg-white rounded opacity-90"></div>
+              </div>
+            </div>
+            <div>
+              <h3 className="font-semibold text-white">
+                <span className="font-medium">Vibe</span>Photo
+              </h3>
+              <Badge className="bg-white/20 text-white border-white/30 text-xs">LGPD</Badge>
+            </div>
           </div>
           
-          <CardTitle className="text-xl">Consentimento para Cookies e Privacidade</CardTitle>
+          <CardTitle className="text-xl text-white">Consentimento para Cookies e Privacidade</CardTitle>
           
-          <p className="text-gray-600 text-sm">
+          <p className="text-white/90 text-sm">
             Respeitamos sua privacidade e seguimos a Lei Geral de Proteção de Dados (LGPD). 
             Escolha como deseja que seus dados sejam utilizados.
           </p>
@@ -109,17 +121,17 @@ export function ConsentModal({ isOpen, onClose, onConsentGiven }: ConsentModalPr
           {/* Quick Actions */}
           {!showDetails && (
             <div className="space-y-4">
-              <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
-                <h3 className="font-semibold text-blue-900 mb-2">🛡️ Sobre a Privacidade dos Seus Dados</h3>
-                <p className="text-blue-800 text-sm mb-3">
+              <div className="bg-gradient-to-r from-[#667eea]/10 to-[#764ba2]/10 p-4 rounded-lg border-l-4 border-[#667eea]">
+                <h3 className="font-semibold text-[#667eea] mb-2">🛡️ Sobre a Privacidade dos Seus Dados</h3>
+                <p className="text-gray-700 text-sm mb-3">
                   Para utilizar nosso serviço de IA para geração de fotos, precisamos processar suas imagens pessoais. 
                   Suas fotos são utilizadas exclusivamente para criar seu modelo personalizado e nunca são compartilhadas.
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <Link href="/legal/privacy" target="_blank" className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                  <Link href="/legal/privacy" target="_blank" className="text-xs text-[#667eea] hover:underline flex items-center gap-1">
                     Política de Privacidade <ExternalLink className="w-3 h-3" />
                   </Link>
-                  <Link href="/legal/terms" target="_blank" className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                  <Link href="/legal/terms" target="_blank" className="text-xs text-[#667eea] hover:underline flex items-center gap-1">
                     Termos de Uso <ExternalLink className="w-3 h-3" />
                   </Link>
                 </div>
@@ -255,7 +267,7 @@ export function ConsentModal({ isOpen, onClose, onConsentGiven }: ConsentModalPr
             <div className="flex flex-col sm:flex-row gap-2">
               <Button 
                 onClick={handleAcceptAll}
-                className="flex-1"
+                className="flex-1 bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:from-[#667eea]/90 hover:to-[#764ba2]/90 text-white border-0"
                 size="sm"
               >
                 Aceitar Todos
@@ -263,7 +275,7 @@ export function ConsentModal({ isOpen, onClose, onConsentGiven }: ConsentModalPr
               <Button 
                 onClick={handleAcceptSelected}
                 variant="outline"
-                className="flex-1"
+                className="flex-1 border-[#667eea] text-[#667eea] hover:bg-[#667eea] hover:text-white"
                 size="sm"
               >
                 Aceitar Selecionados
@@ -272,7 +284,7 @@ export function ConsentModal({ isOpen, onClose, onConsentGiven }: ConsentModalPr
             <Button 
               onClick={handleRejectAll}
               variant="ghost"
-              className="w-full"
+              className="w-full text-gray-600 hover:text-gray-800"
               size="sm"
             >
               Apenas Essenciais
@@ -286,13 +298,13 @@ export function ConsentModal({ isOpen, onClose, onConsentGiven }: ConsentModalPr
               para criação de modelos de IA personalizados, conforme nossa Política de Privacidade.
             </p>
             <div className="flex flex-wrap gap-4">
-              <Link href="/legal/privacy" className="text-blue-600 hover:underline">
+              <Link href="/legal/privacy" className="text-[#667eea] hover:underline hover:text-[#764ba2] transition-colors">
                 Política de Privacidade
               </Link>
-              <Link href="/legal/cookies" className="text-blue-600 hover:underline">
+              <Link href="/legal/cookies" className="text-[#667eea] hover:underline hover:text-[#764ba2] transition-colors">
                 Política de Cookies
               </Link>
-              <Link href="/legal/terms" className="text-blue-600 hover:underline">
+              <Link href="/legal/terms" className="text-[#667eea] hover:underline hover:text-[#764ba2] transition-colors">
                 Termos de Uso
               </Link>
             </div>

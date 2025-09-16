@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { WebhookPayload } from '@/lib/ai/base'
+import { broadcastModelStatusChange, broadcastTrainingProgress } from '@/lib/services/realtime-service'
 import crypto from 'crypto'
 
 export async function POST(request: NextRequest) {
@@ -26,15 +27,10 @@ export async function POST(request: NextRequest) {
       payload = await request.json()
     }
     
-    // Find the model that is currently training
-    // For better accuracy, we should ideally store the trainingJobId in the database
-    // This is a fallback approach - consider adding trainingJobId field to AIModel schema
+    // Find the model with this specific job ID
     const model = await prisma.aIModel.findFirst({
       where: {
-        status: 'TRAINING',
-        updatedAt: {
-          gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Within last 24 hours
-        }
+        jobId: payload.id
       },
       include: {
         user: {
@@ -44,9 +40,6 @@ export async function POST(request: NextRequest) {
             plan: true
           }
         }
-      },
-      orderBy: {
-        updatedAt: 'desc' // Get the most recently updated training model
       }
     })
 
@@ -75,7 +68,7 @@ export async function POST(request: NextRequest) {
         
         // For FLUX training, the model URL is the destination we created
         // Get the model destination from the training logs or construct from payload
-        let modelUrl = payload.output
+        const modelUrl = payload.output
         
         // If output is not available, try to construct from webhook data
         if (!modelUrl && payload.id) {
@@ -132,6 +125,19 @@ export async function POST(request: NextRequest) {
       where: { id: model.id },
       data: updateData
     })
+
+    // Broadcast real-time status change to user
+    await broadcastModelStatusChange(
+      model.id,
+      model.userId,
+      updateData.status || payload.status,
+      {
+        progress: updateData.progress,
+        qualityScore: updateData.qualityScore,
+        errorMessage: updateData.errorMessage,
+        modelUrl: updateData.modelUrl
+      }
+    )
 
     // Send notification to user (if you have email setup)
     if (payload.status === 'succeeded' || payload.status === 'failed') {

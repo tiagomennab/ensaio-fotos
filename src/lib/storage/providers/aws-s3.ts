@@ -1,7 +1,8 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { StorageProvider, UploadResult, UploadOptions, FileValidation, DeleteResult, StorageError } from '../base'
-import { STORAGE_CONFIG, UPLOAD_PATHS } from '../config'
+import { STORAGE_CONFIG, UPLOAD_PATHS, isValidUploadCategory, getStandardizedUploadPath, type UploadCategory } from '../config'
+import { buildS3Key, generateUniqueFilename, isValidCategory, validateCategory, type ValidCategory } from '../path-utils'
 import sharp from 'sharp'
 
 export class AWSS3Provider extends StorageProvider {
@@ -29,9 +30,13 @@ export class AWSS3Provider extends StorageProvider {
   }
 
   async upload(
-    file: File | Buffer, 
-    path: string, 
-    options: UploadOptions = {}
+    file: File | Buffer,
+    path: string,
+    options: UploadOptions & {
+      userId?: string
+      category?: ValidCategory
+      enforceStandardStructure?: boolean
+    } = {}
   ): Promise<UploadResult> {
     try {
       let buffer: Buffer
@@ -47,37 +52,68 @@ export class AWSS3Provider extends StorageProvider {
       } else {
         buffer = file
         originalName = options.filename || 'uploaded-file'
-        mimeType = 'image/jpeg' // Default for processed images
+        mimeType = options.isVideo ? 'video/mp4' : 'image/jpeg' // Default mime type based on content
         size = buffer.length
       }
 
       // Validate file if it's a File object
       if (file instanceof File) {
-        const validation = this.validateFile(file)
+        const validation = this.validateFile(file, options.isVideo)
         if (!validation.isValid) {
           throw new StorageError(validation.error!, 'VALIDATION_ERROR', 400)
         }
       }
 
-      // Process image if options are provided
-      if (options.maxWidth || options.maxHeight || options.quality) {
+      // Process image if options are provided (skip for videos)
+      if (!options.isVideo && (options.maxWidth || options.maxHeight || options.quality)) {
         buffer = await this.processImage(buffer, options)
         size = buffer.length
       }
 
-      // Generate unique filename
-      const timestamp = Date.now()
-      const randomString = Math.random().toString(36).substring(2, 15)
-      const extension = originalName.split('.').pop()
-      const filename = options.filename || `${timestamp}-${randomString}.${extension}`
-      const key = `${path}/${filename}`
+      // Determine key using new standardized structure or legacy format
+      let key: string
+      let filename: string
 
-      // Upload to S3
+      if (options.enforceStandardStructure && options.userId && options.category) {
+        // Use new standardized structure: generated/{userId}/{category}/filename.ext
+        validateCategory(options.category)
+
+        // Get file extension
+        const extension = originalName.split('.').pop() || (options.isVideo ? 'mp4' : 'jpg')
+
+        // Generate unique filename
+        filename = options.filename || generateUniqueFilename(extension)
+        key = buildS3Key(options.userId, options.category, filename)
+      } else if (path.includes('.')) {
+        // Path already includes filename (legacy support)
+        key = path
+        filename = path.split('/').pop() || originalName
+      } else {
+        // Generate filename for legacy path structure
+        const timestamp = Date.now()
+        const randomString = Math.random().toString(36).substring(2, 15)
+        const extension = originalName.split('.').pop() || (options.isVideo ? 'mp4' : 'jpg')
+        filename = options.filename || `${timestamp}-${randomString}.${extension}`
+        key = `${path}/${filename}`
+      }
+
+      // Validate key structure for security
+      if (options.enforceStandardStructure && !key.startsWith('generated/')) {
+        throw new StorageError(
+          'Invalid upload path: All new uploads must use generated/* structure',
+          'INVALID_PATH_ERROR',
+          400
+        )
+      }
+
+      // Upload to S3 with public access if requested
       const command = new PutObjectCommand({
         Bucket: this.bucket,
         Key: key,
         Body: buffer,
         ContentType: mimeType,
+        ContentDisposition: options.isVideo ? 'inline' : 'inline', // Allow inline viewing for both images and videos
+        ACL: options.makePublic ? 'public-read' : undefined,
         Metadata: {
           originalName,
           uploadedAt: new Date().toISOString()
@@ -95,8 +131,16 @@ export class AWSS3Provider extends StorageProvider {
       }
 
       // Generate thumbnail if requested
-      if (options.generateThumbnail) {
-        const thumbnailPath = `${UPLOAD_PATHS.thumbnails}/${filename}`
+      if (options.generateThumbnail && options.userId) {
+        let thumbnailPath: string
+        if (options.enforceStandardStructure) {
+          // Use standardized thumbnail path
+          const thumbnailFilename = generateUniqueFilename('jpg')
+          thumbnailPath = buildS3Key(options.userId, 'thumbnails', thumbnailFilename)
+        } else {
+          // Use legacy thumbnail path
+          thumbnailPath = `${UPLOAD_PATHS.legacy.thumbnails}/${filename}`
+        }
         const thumbnailResult = await this.generateThumbnail(key, thumbnailPath)
         result.thumbnailUrl = thumbnailResult.url
       }
@@ -112,6 +156,28 @@ export class AWSS3Provider extends StorageProvider {
         'S3_UPLOAD_ERROR'
       )
     }
+  }
+
+  /**
+   * Upload with standardized structure (recommended for all new uploads)
+   * @param file File or Buffer to upload
+   * @param userId User ID who owns the file
+   * @param category Storage category (validated whitelist)
+   * @param options Additional upload options
+   * @returns UploadResult with permanent URLs
+   */
+  async uploadStandardized(
+    file: File | Buffer,
+    userId: string,
+    category: ValidCategory,
+    options: UploadOptions = {}
+  ): Promise<UploadResult> {
+    return this.upload(file, '', {
+      ...options,
+      userId,
+      category,
+      enforceStandardStructure: true
+    })
   }
 
   async delete(key: string): Promise<DeleteResult> {
@@ -162,12 +228,94 @@ export class AWSS3Provider extends StorageProvider {
     }
   }
 
-  validateFile(file: File): FileValidation {
-    // Check file size
-    if (file.size > STORAGE_CONFIG.limits.maxFileSize) {
+  /**
+   * Upload a file from a URL to S3
+   * @param url Source URL to download from
+   * @param path S3 path to store the file
+   * @param options Upload options
+   * @returns UploadResult with the uploaded file information
+   */
+  async uploadFromUrl(url: string, path: string, options: UploadOptions = {}): Promise<UploadResult> {
+    try {
+      console.log(`📥 Downloading from URL: ${url}`)
+      
+      // Fetch the file from the URL
+      const response = await fetch(url)
+      
+      if (!response.ok) {
+        throw new StorageError(
+          `Failed to download from URL: ${response.status} ${response.statusText}`,
+          'URL_DOWNLOAD_ERROR',
+          response.status
+        )
+      }
+
+      // Get content type and size from response headers
+      const contentType = response.headers.get('content-type') || (options.isVideo ? 'video/mp4' : 'image/jpeg')
+      const contentLength = response.headers.get('content-length')
+      
+      // Convert to buffer
+      const buffer = Buffer.from(await response.arrayBuffer())
+      
+      console.log(`📦 Downloaded ${buffer.length} bytes, content-type: ${contentType}`)
+
+      // Extract filename from URL or use provided filename
+      const filename = options.filename || this.extractFilenameFromUrl(url, options.isVideo)
+      
+      // Upload using the existing upload method
+      return await this.upload(buffer, path, {
+        ...options,
+        filename,
+        // Override mime type with detected content type
+        // This will be handled in the upload method
+      })
+      
+    } catch (error) {
+      if (error instanceof StorageError) {
+        throw error
+      }
+      throw new StorageError(
+        `Failed to upload from URL: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'URL_UPLOAD_ERROR'
+      )
+    }
+  }
+
+  private extractFilenameFromUrl(url: string, isVideo?: boolean): string {
+    try {
+      const urlObj = new URL(url)
+      const pathname = urlObj.pathname
+      const segments = pathname.split('/')
+      const filename = segments[segments.length - 1]
+      
+      // If filename has extension, return it
+      if (filename.includes('.')) {
+        return filename
+      }
+      
+      // Generate a filename with appropriate extension
+      const timestamp = Date.now()
+      const randomString = Math.random().toString(36).substring(2, 15)
+      const extension = isVideo ? 'mp4' : 'jpg'
+      
+      return `${timestamp}-${randomString}.${extension}`
+    } catch (error) {
+      // If URL parsing fails, generate a random filename
+      const timestamp = Date.now()
+      const randomString = Math.random().toString(36).substring(2, 15)
+      const extension = isVideo ? 'mp4' : 'jpg'
+      
+      return `${timestamp}-${randomString}.${extension}`
+    }
+  }
+
+  validateFile(file: File, isVideo?: boolean): FileValidation {
+    // Check file size based on type
+    const maxSize = isVideo ? STORAGE_CONFIG.limits.maxVideoSize : STORAGE_CONFIG.limits.maxFileSize
+    if (file.size > maxSize) {
       return {
         isValid: false,
-        error: `File size exceeds maximum allowed size of ${STORAGE_CONFIG.limits.maxFileSize / 1024 / 1024}MB`
+        error: `File size exceeds maximum allowed size of ${maxSize / 1024 / 1024}MB`
       }
     }
 

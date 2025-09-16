@@ -8,6 +8,27 @@ export type {
   PackageCategory
 }
 
+// Media types for gallery operations
+export type MediaOperationType = "generated" | "edited" | "upscaled" | "video"
+
+// Extended media information for gallery
+export interface MediaItem {
+  id: string
+  url: string
+  originalUrl?: string
+  thumbnailUrl?: string
+  operationType: MediaOperationType
+  status: GenerationStatus
+  metadata?: {
+    width?: number
+    height?: number
+    format?: string
+    sizeBytes?: number
+    duration?: number // for videos
+  }
+  generation?: Generation
+}
+
 export interface User {
   id: string
   email: string
@@ -18,7 +39,7 @@ export interface User {
   creditsLimit: number
   totalModels: number
   totalGenerations: number
-  totalCreditsUsed: number
+  // totalCreditsUsed calculated from usage logs, not stored in DB
   lastLoginAt?: Date
   createdAt: Date
   updatedAt: Date
@@ -122,6 +143,13 @@ export interface GenerationRequest {
   strength?: number
   seed?: number
   style?: string
+  // FLUX-specific quality parameters
+  steps?: number
+  guidance_scale?: number
+  safety_tolerance?: number
+  output_quality?: number
+  output_format?: 'jpg' | 'png' | 'webp'
+  raw_mode?: boolean // FLUX 1.1 Pro Ultra raw mode for natural images
 }
 
 export interface ModelTrainingRequest {
@@ -173,23 +201,44 @@ export interface SubscriptionLimits {
 export const PLAN_LIMITS: Record<Plan, SubscriptionLimits> = {
   STARTER: {
     models: 1,
-    generations: 10,
-    resolution: '512x512',
-    features: ['watermark'],
+    generations: 500,
+    resolution: '2048x2048', // Updated for FLUX 1.1 Pro Ultra testing (4MP)
+    features: ['watermark', 'flux_ultra', 'raw_mode'], // Enhanced features for testing
     storage: 1
   },
   PREMIUM: {
     models: 3,
-    generations: 100,
+    generations: 1200,
     resolution: '1024x1024',
     features: ['no_watermark', 'premium_packages'],
     storage: 5
   },
   GOLD: {
     models: -1, // unlimited
-    generations: 500,
+    generations: 2500,
     resolution: '2048x2048',
     features: ['no_watermark', 'premium_packages', 'api_access', 'priority_support'],
     storage: 20
   }
+}
+
+// Prompt Builder Types
+export interface PromptBlock {
+  id: string
+  name: string
+  value: string
+  category: 'style' | 'lighting' | 'camera' | 'quality' | 'mood' | 'environment'
+  isSelected: boolean
+}
+
+export interface PromptCategory {
+  name: string
+  blocks: PromptBlock[]
+  allowMultiple: boolean
+}
+
+export interface BuiltPrompt {
+  prompt: string
+  blocks: PromptBlock[]
+  timestamp: Date
 }

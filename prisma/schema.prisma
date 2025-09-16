@@ -19,33 +19,55 @@ model User {
   emailVerified DateTime?
 
   // Subscription and billing
-  plan               Plan      @default(STARTER)
-  stripeCustomerId   String?   @unique
-  subscriptionId     String?   @unique
-  subscriptionStatus String?
-  subscriptionEndsAt DateTime?
-  creditsUsed        Int       @default(0)
-  creditsLimit       Int       @default(10) // Default for free plan
+  plan                    Plan      @default(STARTER)
+  // stripeCustomerId        String?   @unique // Legacy Stripe support - COMMENTED FOR TESTING
+  // asaasCustomerId         String?   @unique // Asaas customer ID - COMMENTED FOR TESTING
+  // subscriptionId          String?   @unique // COMMENTED FOR TESTING
+  // subscriptionStatus      String? // COMMENTED FOR TESTING
+  // subscriptionEndsAt      DateTime? // COMMENTED FOR TESTING
+  // subscriptionCancelledAt DateTime? // COMMENTED FOR TESTING
+  // nextBillingDate         DateTime? // TEMPORARILY COMMENTED - field doesn't exist in DB
+  creditsUsed             Int       @default(0)
+  creditsLimit            Int       @default(500) // Default for STARTER plan
+  // creditsBalance          Int       @default(0) // Purchased credits balance - COMMENTED FOR TESTING
 
-  // User statistics (from migrations)
-  totalModels      Int       @default(0)
-  totalGenerations Int       @default(0)
-  totalCreditsUsed Int       @default(0)
-  lastLoginAt      DateTime?
+  // Brazilian customer data for Asaas - TEMPORARILY COMMENTED (MISSING IN DB)
+  // cpfCnpj            String?
+  // phone              String?
+  // mobilePhone        String?
+  // address            String?
+  // addressNumber      String?
+  // complement         String?
+  // province           String?
+  // city               String?
+  // state              String?
+  // postalCode         String?
+
+  // User statistics (from migrations) - TEMPORARILY COMMENTED (MISSING IN DB)
+  // totalModels      Int       @default(0)
+  // totalGenerations Int       @default(0)
+  // totalCreditsUsed Int       @default(0)
+  lastLoginAt DateTime?
 
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  accounts    Account[]
-  sessions    Session[]
-  models      AIModel[]
-  generations Generation[]
-  collections Collection[]
-  apiKeys     ApiKey[]
-  systemLogs  SystemLog[]
-  consents    UserConsent[]
+  accounts           Account[]
+  sessions           Session[]
+  models             AIModel[]
+  generations        Generation[]
+  videoGenerations   VideoGeneration[]
+  collections        Collection[]
+  editHistory        EditHistory[]
+  apiKeys            ApiKey[]
+  systemLogs         SystemLog[]
+  consents           UserConsent[]
+  // payments           Payment[] // COMMENTED FOR TESTING - payment system disabled
+  // creditPurchases    CreditPurchase[] // COMMENTED FOR TESTING - payment system disabled
+  // paymentMethods     PaymentMethod[] // COMMENTED FOR TESTING - payment system disabled
+  // creditTransactions CreditTransaction[] // COMMENTED FOR TESTING - payment system disabled
 
   @@index([lastLoginAt])
   @@index([plan])
@@ -95,6 +117,11 @@ enum Plan {
   STARTER
   PREMIUM
   GOLD
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
 }
 
 enum ModelStatus {
@@ -176,10 +203,19 @@ model Generation {
   style       String? // "photographic", "artistic", "cartoon", etc.
 
   // Results
-  status                  GenerationStatus @default(PENDING)
-  jobId                   String? // External job ID from AI provider
-  imageUrls               Json[] // Array of generated image URLs
-  thumbnailUrls           Json[] // Array of thumbnail URLs
+  status        GenerationStatus @default(PENDING)
+  jobId         String? // External job ID from AI provider
+  imageUrls     Json[] // Array of generated image URLs
+  thumbnailUrls Json[] // Array of thumbnail URLs
+
+  // Storage metadata
+  storageProvider String? // "aws", "supabase", etc
+  storageBucket   String?
+  storageKeys     Json    @default("[]") // Array of storage keys as JSON for compatibility
+  operationType   String? // "generation", "edit", "upscale", "video"
+  storageContext  String? // "generated", "edited", "upscaled", "videos"
+  metadata        Json?   @default("{}") // Additional metadata for context
+
   errorMessage            String?
   estimatedCompletionTime DateTime?
 
@@ -193,10 +229,11 @@ model Generation {
   completedAt DateTime?
 
   // Relations
-  userId  String
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  modelId String
-  model   AIModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  modelId          String
+  model            AIModel           @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  videoGenerations VideoGeneration[] // Videos created from this generation
 
   @@map("generations")
 }
@@ -220,6 +257,25 @@ model Collection {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("collections")
+}
+
+model EditHistory {
+  id               String  @id @default(cuid())
+  userId           String  @map("user_id")
+  originalImageUrl String  @map("original_image_url")
+  editedImageUrl   String  @map("edited_image_url")
+  thumbnailUrl     String? @map("thumbnail_url")
+  operation        String
+  prompt           String
+  metadata         Json    @default("{}")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("edit_history")
 }
 
 enum PackageCategory {
@@ -328,33 +384,348 @@ model SystemLog {
 
 // LGPD Consent Management
 model UserConsent {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   userId    String? // Can be null for anonymous users
   ipAddress String
   userAgent String
-  
+
   // Consent preferences
-  essential    Boolean @default(true)  // Always true (essential cookies)
-  functional   Boolean @default(false)
-  analytics    Boolean @default(false)
-  marketing    Boolean @default(false)
-  
+  essential  Boolean @default(true) // Always true (essential cookies)
+  functional Boolean @default(false)
+  analytics  Boolean @default(false)
+  marketing  Boolean @default(false)
+
   // Metadata
-  version      String          // Consent version (for tracking policy changes)
-  consentedAt  DateTime        // When user gave/updated consent
-  isRevocation Boolean @default(false) // True if this record represents consent withdrawal
-  
+  version      String // Consent version (for tracking policy changes)
+  consentedAt  DateTime // When user gave/updated consent
+  isRevocation Boolean  @default(false) // True if this record represents consent withdrawal
+
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   // Relations
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
-  
+
   @@index([userId])
   @@index([ipAddress])
   @@index([consentedAt])
   @@index([version])
   @@index([isRevocation])
   @@map("user_consents")
+}
+
+// Payment Management Models - COMMENTED FOR TESTING
+
+// enum PaymentStatus {
+//   PENDING
+//   CONFIRMED
+//   OVERDUE
+//   REFUNDED
+//   CANCELLED
+//   FAILED
+// }
+
+// enum PaymentType {
+//   SUBSCRIPTION // Monthly/Annual subscription
+//   CREDIT_PURCHASE // One-time credit purchase
+//   PHOTO_PACKAGE // Premium photo package
+// }
+
+// enum BillingType {
+//   PIX
+//   CREDIT_CARD
+//   BOLETO
+//   UNDEFINED
+// }
+
+// model Payment {
+//   id             String @id @default(cuid())
+//   asaasPaymentId String @unique // Asaas payment ID
+
+//   // Payment details
+//   type        PaymentType
+//   status      PaymentStatus @default(PENDING)
+//   billingType BillingType
+//   value       Float // Payment value in BRL
+//   description String?
+
+//   // Due date and payment tracking
+//   dueDate       DateTime
+//   confirmedDate DateTime?
+//   overdueDate   DateTime?
+
+//   // Installments for credit cards
+//   installmentCount Int?
+//   installmentValue Float?
+
+//   // References
+//   // subscriptionId    String?     // Asaas subscription ID if applicable - TEMPORARILY COMMENTED (MISSING IN DB)
+//   // externalReference String?     // Our internal reference - TEMPORARILY COMMENTED (MISSING IN DB)
+
+//   // Related data
+//   planType     Plan? // If subscription payment
+//   creditAmount Int? // If credit purchase
+//   packageId    String? // If photo package purchase
+
+//   // Timestamps
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+
+//   // Relations
+//   userId String
+//   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+//   @@index([userId])
+//   @@index([status])
+//   @@index([type])
+//   @@index([asaasPaymentId])
+//   @@index([createdAt])
+//   @@map("payments")
+// }
+
+// model CreditPurchase {
+//   id             String  @id @default(cuid())
+//   asaasPaymentId String? @unique // Asaas payment ID
+
+//   // Purchase details
+//   packageId    String? // References CreditPackage.id
+//   packageName  String // "Pacote Essencial", "Pacote Premium", etc
+//   creditAmount Int // Number of credits purchased
+//   bonusCredits Int           @default(0) // Bonus credits received
+//   value        Float // Price paid in BRL
+//   status       PaymentStatus @default(PENDING)
+//   usedCredits  Int           @default(0) // Credits already used
+
+//   // Validity
+//   validUntil DateTime // Credits valid for 1 year
+//   isExpired  Boolean  @default(false)
+
+//   // Timestamps
+//   purchasedAt DateTime  @default(now())
+//   confirmedAt DateTime? // When payment was confirmed
+//   updatedAt   DateTime  @updatedAt
+
+//   // Relations
+//   userId             String
+//   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+//   package            CreditPackage?      @relation(fields: [packageId], references: [id])
+//   creditTransactions CreditTransaction[]
+
+//   @@index([userId])
+//   @@index([status])
+//   @@index([validUntil])
+//   @@index([isExpired])
+//   @@index([packageId])
+//   @@map("credit_purchases")
+// }
+
+// model WebhookEvent {
+//   id String @id @default(cuid())
+
+//   // Webhook details
+//   event               String // PAYMENT_CONFIRMED, SUBSCRIPTION_EXPIRED, etc
+//   asaasPaymentId      String? // Payment ID from Asaas
+//   asaasSubscriptionId String? // Subscription ID from Asaas
+//   // asaasCustomerId   String?     // Customer ID from Asaas - COMMENTED FOR NOW
+
+//   // Processing status
+//   processed       Boolean @default(false)
+//   processingError String? // Error message if processing failed
+//   retryCount      Int     @default(0)
+
+//   // Idempotency
+//   idempotencyKey String? @unique // To prevent duplicate processing
+
+//   // Raw data
+//   rawPayload Json // Full webhook payload
+
+//   // Timestamps
+//   receivedAt  DateTime  @default(now())
+//   processedAt DateTime?
+//   lastRetryAt DateTime?
+
+//   @@index([event])
+//   @@index([processed])
+//   @@index([asaasPaymentId])
+//   @@index([asaasSubscriptionId])
+//   @@index([receivedAt])
+//   @@map("webhook_events")
+// }
+
+// model PaymentMethod {
+//   id String @id @default(cuid())
+
+//   // Card details (tokenized)
+//   asaasTokenId   String? @unique // Asaas tokenized card ID
+//   cardLast4      String? // Last 4 digits for display
+//   cardBrand      String? // visa, mastercard, etc
+//   cardHolderName String?
+//   expiryMonth    String?
+//   expiryYear     String?
+
+//   // Status
+//   isActive  Boolean @default(true)
+//   isDefault Boolean @default(false)
+
+//   // Timestamps
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+
+//   // Relations
+//   userId String
+//   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+//   @@index([userId])
+//   @@index([isActive])
+//   @@map("payment_methods")
+// }
+
+// Credit Packages and Transactions Models - COMMENTED FOR TESTING
+
+// model CreditPackage {
+//   id             String  @id // ESSENTIAL, ADVANCED, PRO, etc
+//   name           String // "Pacote Essencial", "Pacote Avançado", etc
+//   description    String? @db.Text
+//   creditAmount   Int // Number of credits in package
+//   price          Float // Price in BRL
+//   bonusCredits   Int     @default(0) // Bonus credits
+//   validityMonths Int     @default(12) // Validity in months
+//   isActive       Boolean @default(true)
+//   sortOrder      Int     @default(0)
+
+//   // Timestamps
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+
+//   // Relations
+//   creditPurchases CreditPurchase[]
+
+//   @@map("credit_packages")
+// }
+
+// enum CreditTransactionType {
+//   EARNED // Credits added (purchase, bonus, subscription renewal)
+//   SPENT // Credits used (generation, training)
+//   EXPIRED // Credits expired
+//   REFUNDED // Credits refunded
+// }
+
+// enum CreditTransactionSource {
+//   SUBSCRIPTION // From monthly subscription
+//   PURCHASE // From credit package purchase
+//   BONUS // Bonus credits
+//   GENERATION // Spent on image generation
+//   TRAINING // Spent on model training
+//   REFUND // Refunded credits
+//   EXPIRATION // Expired credits
+// }
+
+// model CreditTransaction {
+//   id               String                  @id @default(cuid())
+//   userId           String
+//   type             CreditTransactionType
+//   source           CreditTransactionSource
+//   amount           Int // Positive for earned, negative for spent
+//   description      String?                 @db.Text
+//   referenceId      String? // Generation ID, Model ID, etc
+//   creditPurchaseId String? // Which credit purchase was affected
+//   metadata         Json? // Additional transaction data
+//   balanceAfter     Int // Total balance after this transaction
+
+//   // Timestamps
+//   createdAt DateTime @default(now())
+
+//   // Relations
+//   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+//   creditPurchase CreditPurchase? @relation(fields: [creditPurchaseId], references: [id], onDelete: SetNull)
+
+//   @@index([userId])
+//   @@index([type])
+//   @@index([source])
+//   @@index([createdAt])
+//   @@index([creditPurchaseId])
+//   @@map("credit_transactions")
+// }
+
+// Video Generation Models
+
+enum VideoStatus {
+  STARTING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum VideoQuality {
+  standard // 720p
+  pro // 1080p
+}
+
+model VideoGeneration {
+  id String @id @default(cuid())
+
+  // Source and target
+  sourceImageUrl     String? @db.Text // Original image for video generation (optional for text-to-video)
+  sourceGenerationId String? // If generated from a Generation
+
+  // Video parameters
+  prompt         String       @db.Text
+  negativePrompt String?      @db.Text
+  duration       Int          @default(5) // 5 or 10 seconds
+  aspectRatio    String       @default("16:9") // "16:9", "9:16", "1:1"
+  quality        VideoQuality @default(standard) // standard or pro
+  template       String? // Template used (optional)
+
+  // Processing
+  status       VideoStatus @default(STARTING)
+  jobId        String?     @unique // Replicate job ID
+  errorMessage String?     @db.Text
+
+  // Results
+  videoUrl     String? @db.Text // Final video URL
+  thumbnailUrl String? @db.Text // Video thumbnail
+
+  // Storage metadata
+  storageProvider String? // "aws", "supabase", etc
+  storageBucket   String?
+  storageKey      String? // Video storage key
+  posterKey       String? // Thumbnail/poster storage key
+  publicUrl       String? @db.Text // Primary public URL
+  mimeType        String? @default("video/mp4")
+  sizeBytes       BigInt?
+  durationSec     Int? // Duration in seconds
+
+  // Cost and usage
+  creditsUsed            Int  @default(0) // Credits consumed
+  estimatedTimeRemaining Int? @default(0) // Estimated time remaining
+  progress               Int? @default(0) // Processing progress (0-100%)
+
+  // Processing timestamps  
+  processingStartedAt   DateTime? // When processing started
+  processingCompletedAt DateTime? // When processing completed
+
+  // Metadata
+  metadata Json? // Additional data (dimensions, etc.)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId           String
+  user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceGeneration Generation? @relation(fields: [sourceGenerationId], references: [id], onDelete: SetNull)
+
+  // Indexes for performance
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([jobId])
+  @@index([sourceGenerationId])
+  @@index([quality])
+  @@index([duration])
+  // Map to actual database table name
+  @@map("video_generations")
 }

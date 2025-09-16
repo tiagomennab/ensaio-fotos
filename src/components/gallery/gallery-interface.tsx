@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -26,6 +27,11 @@ import { GalleryList } from './gallery-list'
 import { GalleryStats } from './gallery-stats'
 import { FilterPanel } from './filter-panel'
 import { ImageModal } from './image-modal'
+import { UpscaleModal } from '@/components/upscale/upscale-modal'
+import { UpscaleProgress } from '@/components/upscale/upscale-progress'
+import { UpscalePreview } from '@/components/upscale/upscale-preview'
+import { combineAllMediaItems, generationToMediaItems, editHistoryToMediaItems, videoToMediaItems } from '@/lib/utils/media-transformers'
+import { MediaItem } from '@/types'
 
 interface GalleryInterfaceProps {
   generations: any[]
@@ -61,12 +67,34 @@ export function GalleryInterface({
 }: GalleryInterfaceProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { data: session } = useSession()
   
   const [searchQuery, setSearchQuery] = useState(filters.search || '')
   const [showFilters, setShowFilters] = useState(false)
   const [selectedImages, setSelectedImages] = useState<string[]>([])
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [bulkSelectMode, setBulkSelectMode] = useState(false)
+  const [activeTab, setActiveTab] = useState<'generated' | 'edited' | 'videos'>('generated')
+  const [editedImages, setEditedImages] = useState<any[]>([])
+  const [videos, setVideos] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  
+  // Upscale states
+  const [upscaleModal, setUpscaleModal] = useState({
+    isOpen: false,
+    imageUrl: '',
+    generation: null
+  })
+  const [activeUpscale, setActiveUpscale] = useState<{
+    jobId: string
+    originalImage: string
+    scaleFactor: number
+  } | null>(null)
+  const [upscaleResult, setUpscaleResult] = useState<{
+    originalImage: string
+    upscaledImage: string
+    scaleFactor: number
+  } | null>(null)
 
   const sortOptions = [
     { value: 'newest', label: 'Mais Recentes' },
@@ -130,12 +158,248 @@ export function GalleryInterface({
     )
   }
 
+  // Upscale functions
+  const handleOpenUpscale = async (imageUrl: string, generation?: any) => {
+    // Check if the URL is a temporary Replicate URL (will be expired)
+    const isReplicateUrl = imageUrl.includes('replicate.delivery') || imageUrl.includes('pbxt.replicate.delivery')
+    
+    if (isReplicateUrl && generation) {
+      const shouldRecover = confirm(
+        'Esta imagem usa uma URL temporária que pode ter expirado. Deseja tentar recuperar a imagem permanentemente antes do upscale?'
+      )
+      
+      if (shouldRecover) {
+        try {
+          const response = await fetch('/api/images/recover', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ generationId: generation.id })
+          })
+          
+          const result = await response.json()
+          
+          if (result.success && result.recovered) {
+            alert(`Imagem recuperada com sucesso! Agora você pode fazer o upscale.`)
+            // Use the new permanent URL
+            const newImageUrl = result.imageUrls[0]
+            setUpscaleModal({
+              isOpen: true,
+              imageUrl: newImageUrl,
+              generation
+            })
+            // Reload the page to show updated URLs
+            window.location.reload()
+            return
+          } else if (response.status === 410) {
+            alert('As imagens expiraram e não podem mais ser recuperadas. Gere novas imagens.')
+            return
+          } else {
+            alert(`Falha na recuperação: ${result.error}. Você pode tentar novamente ou gerar novas imagens.`)
+            return
+          }
+        } catch (error) {
+          console.error('Recovery error:', error)
+          alert('Erro ao tentar recuperar a imagem. Tente novamente ou gere novas imagens.')
+          return
+        }
+      } else {
+        alert('Upscale cancelado. Para fazer upscale, é necessário ter URLs permanentes.')
+        return
+      }
+    }
+    
+    // No need to check image availability with fetch/HEAD since:
+    // 1. If image is displayed in gallery, it's accessible
+    // 2. CORS restrictions can block HEAD requests while allowing img tags
+    // 3. The upscale API will validate the URL anyway
+    setUpscaleModal({
+      isOpen: true,
+      imageUrl,
+      generation
+    })
+  }
+
+  const handleCloseUpscale = () => {
+    setUpscaleModal({
+      isOpen: false,
+      imageUrl: '',
+      generation: null
+    })
+  }
+
+  const handleStartUpscale = async (options: any) => {
+    try {
+      const requestBody = {
+        imageUrl: upscaleModal.imageUrl,
+        options: options
+      }
+      
+      
+      const response = await fetch('/api/upscale', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao iniciar upscale')
+      }
+
+      // Start monitoring upscale progress
+      setActiveUpscale({
+        jobId: data.jobIds?.[0] || data.jobId,
+        originalImage: upscaleModal.imageUrl,
+        scaleFactor: options.scale_factor || 2
+      })
+
+      // Clear modal
+      setUpscaleModal({
+        isOpen: false,
+        imageUrl: '',
+        generation: null
+      })
+
+    } catch (error) {
+      console.error('Error starting upscale:', error)
+      alert('Erro ao iniciar upscale: ' + (error instanceof Error ? error.message : 'Erro desconhecido'))
+    }
+  }
+
+  const handleUpscaleComplete = (result: { resultImages: string[]; downloadUrl: string }) => {
+    if (activeUpscale && result.resultImages?.length > 0) {
+      setUpscaleResult({
+        originalImage: activeUpscale.originalImage,
+        upscaledImage: result.resultImages[0],
+        scaleFactor: activeUpscale.scaleFactor
+      })
+    }
+    setActiveUpscale(null)
+  }
+
+  const handleUpscaleCancel = () => {
+    setActiveUpscale(null)
+  }
+
+  const handleUpscaleError = (error: string) => {
+    alert('Erro no upscale: ' + error)
+    setActiveUpscale(null)
+  }
+
+  const handleResetUpscale = () => {
+    setUpscaleResult(null)
+  }
+
+  // Load specific data for each tab
+  const loadEditedImages = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/gallery/edited?page=${filters.page}&limit=20${filters.search ? `&search=${filters.search}` : ''}`)
+      const data = await response.json()
+
+      if (data.success) {
+        setEditedImages(data.data)
+      }
+    } catch (error) {
+      console.error('Error loading edited images:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadVideos = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/gallery/videos?page=${filters.page}&limit=20${filters.search ? `&search=${filters.search}` : ''}`)
+      const data = await response.json()
+
+      if (data.success) {
+        setVideos(data.data)
+      }
+    } catch (error) {
+      console.error('Error loading videos:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Load data when tab changes
+  useEffect(() => {
+    if (activeTab === 'edited') {
+      loadEditedImages()
+    } else if (activeTab === 'videos') {
+      loadVideos()
+    }
+  }, [activeTab, filters.page, filters.search])
+
+  // Get current data based on active tab
+  const getCurrentData = (): MediaItem[] => {
+    switch (activeTab) {
+      case 'edited':
+        return editHistoryToMediaItems(editedImages)
+      case 'videos':
+        return videoToMediaItems(videos)
+      case 'generated':
+      default:
+        // Show regular generated images (not edited or upscaled)
+        const filteredGenerations = generations.filter(generation => {
+          if (generation.operationType) {
+            return generation.operationType === 'generation'
+          }
+          // Legacy fallback: exclude edited and upscaled
+          return !generation.prompt?.startsWith('[EDITED]') && !generation.prompt?.startsWith('[UPSCALED]')
+        })
+        return generationToMediaItems(filteredGenerations)
+    }
+  }
+
+  const currentData = getCurrentData()
+
   const hasActiveFilters = filters.model || filters.search
 
   return (
     <div className="space-y-6">
       {/* Stats Overview */}
       <GalleryStats stats={stats} />
+
+      {/* Tabs */}
+      <div className="bg-white rounded-lg border border-gray-200">
+        <div className="flex border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab('generated')}
+            className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${
+              activeTab === 'generated'
+                ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+            }`}
+          >
+            🎨 Fotos Geradas ({generations.filter(g => !g.prompt?.startsWith('[EDITED]') && !g.prompt?.startsWith('[UPSCALED]')).length})
+          </button>
+          <button
+            onClick={() => setActiveTab('edited')}
+            className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${
+              activeTab === 'edited'
+                ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+            }`}
+          >
+            ✨ Fotos Editadas ({editedImages.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('videos')}
+            className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${
+              activeTab === 'videos'
+                ? 'text-green-600 border-b-2 border-green-600 bg-green-50'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+            }`}
+          >
+            🎬 Vídeos ({videos.length})
+          </button>
+        </div>
+      </div>
 
       {/* Search and Filters */}
       <Card>
@@ -313,7 +577,7 @@ export function GalleryInterface({
       )}
 
       {/* Gallery Content */}
-      {generations.length === 0 ? (
+      {currentData.length === 0 && !loading ? (
         <Card className="text-center py-12">
           <CardContent>
             <Image className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -329,9 +593,14 @@ export function GalleryInterface({
             {hasActiveFilters ? (
               <Button onClick={clearFilters}>Limpar Filtros</Button>
             ) : (
-              <Button asChild>
-                <a href="/generate">Gere Sua Primeira Foto</a>
-              </Button>
+              <div className="flex flex-col sm:flex-row items-center justify-center space-y-3 sm:space-y-0 sm:space-x-4">
+                <Button asChild>
+                  <a href="/generate">Gere Sua Primeira Foto</a>
+                </Button>
+                <Button variant="outline" asChild>
+                  <a href="/editor">✨ Editar com IA</a>
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -340,7 +609,10 @@ export function GalleryInterface({
           {/* Toggle Bulk Select */}
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-600">
-              Mostrando {generations.length} de {pagination.total} gerações
+              Mostrando {currentData.length} de {currentData.length} {
+                activeTab === 'generated' ? 'fotos geradas' :
+                activeTab === 'edited' ? 'fotos editadas' : 'vídeos'
+              }
             </p>
             <Button
               variant="outline"
@@ -352,22 +624,81 @@ export function GalleryInterface({
           </div>
 
           {/* Gallery Grid or List */}
-          {filters.view === 'grid' ? (
-            <GalleryGrid
-              generations={generations}
-              bulkSelectMode={bulkSelectMode}
-              selectedImages={selectedImages}
-              onImageSelect={toggleImageSelection}
-              onImageClick={setSelectedImage}
-            />
+          {currentData.length === 0 ? (
+            <Card className="text-center py-12">
+              <CardContent>
+                <Image className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  {activeTab === 'generated' ? 'Nenhuma Foto Gerada' :
+                   activeTab === 'edited' ? 'Nenhuma Foto Editada' : 'Nenhum Vídeo'}
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  {activeTab === 'generated' ? 'Comece gerando fotos com IA para construir sua galeria' :
+                   activeTab === 'edited' ? 'Edite suas fotos existentes com nosso Editor IA' :
+                   'Crie vídeos incríveis a partir de suas fotos'}
+                </p>
+                <div className="flex flex-col sm:flex-row items-center justify-center space-y-3 sm:space-y-0 sm:space-x-4">
+                  {activeTab === 'generated' ? (
+                    <>
+                      <Button asChild>
+                        <a href="/generate">Gere Sua Primeira Foto</a>
+                      </Button>
+                      <Button variant="outline" onClick={() => setActiveTab('edited')}>
+                        Ver Fotos Editadas
+                      </Button>
+                    </>
+                  ) : activeTab === 'edited' ? (
+                    <>
+                      <Button asChild>
+                        <a href="/editor">✨ Editar com IA</a>
+                      </Button>
+                      <Button variant="outline" onClick={() => setActiveTab('generated')}>
+                        Ver Fotos Geradas
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button asChild>
+                        <a href="/video">🎬 Criar Vídeo</a>
+                      </Button>
+                      <Button variant="outline" onClick={() => setActiveTab('generated')}>
+                        Ver Fotos Geradas
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           ) : (
-            <GalleryList
-              generations={generations}
-              bulkSelectMode={bulkSelectMode}
-              selectedImages={selectedImages}
-              onImageSelect={toggleImageSelection}
-              onImageClick={setSelectedImage}
-            />
+            <>
+              {loading ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-600">Carregando...</p>
+                </div>
+              ) : (
+                <>
+                  {filters.view === 'grid' ? (
+                    <GalleryGrid
+                      mediaItems={currentData}
+                      bulkSelectMode={bulkSelectMode}
+                      selectedImages={selectedImages}
+                      onImageSelect={toggleImageSelection}
+                      onImageClick={setSelectedImage}
+                      onUpscale={handleOpenUpscale}
+                    />
+                  ) : (
+                    <GalleryList
+                      mediaItems={currentData}
+                      bulkSelectMode={bulkSelectMode}
+                      selectedImages={selectedImages}
+                      onImageSelect={toggleImageSelection}
+                      onImageClick={setSelectedImage}
+                      onUpscale={handleOpenUpscale}
+                    />
+                  )}
+                </>
+              )}
+            </>
           )}
 
           {/* Pagination */}
@@ -414,8 +745,48 @@ export function GalleryInterface({
         <ImageModal
           imageUrl={selectedImage}
           onClose={() => setSelectedImage(null)}
-          generations={generations}
+          mediaItems={currentData}
         />
+      )}
+
+      {/* Upscale Modal */}
+      {upscaleModal.isOpen && (
+        <UpscaleModal
+          isOpen={upscaleModal.isOpen}
+          imageUrl={upscaleModal.imageUrl}
+          generation={upscaleModal.generation}
+          onClose={handleCloseUpscale}
+          onUpscale={handleStartUpscale}
+          userPlan={session?.user?.plan || 'FREE'}
+        />
+      )}
+
+      {/* Upscale Progress */}
+      {activeUpscale && (
+        <div className="fixed bottom-4 right-4 z-50 max-w-md">
+          <UpscaleProgress
+            jobId={activeUpscale.jobId}
+            originalImage={activeUpscale.originalImage}
+            scaleFactor={activeUpscale.scaleFactor}
+            onComplete={handleUpscaleComplete}
+            onCancel={handleUpscaleCancel}
+            onError={handleUpscaleError}
+          />
+        </div>
+      )}
+
+      {/* Upscale Result */}
+      {upscaleResult && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+            <UpscalePreview
+              originalImage={upscaleResult.originalImage}
+              upscaledImage={upscaleResult.upscaledImage}
+              scaleFactor={upscaleResult.scaleFactor}
+              onReset={handleResetUpscale}
+            />
+          </div>
+        </div>
       )}
     </div>
   )

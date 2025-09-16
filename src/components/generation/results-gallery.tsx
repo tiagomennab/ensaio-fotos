@@ -123,7 +123,7 @@ export function ResultsGallery({ generations }: ResultsGalleryProps) {
               <div className="grid grid-cols-2 gap-2 mb-3">
                 {generation.imageUrls.slice(0, 4).map((imageUrl, index) => (
                   <div
-                    key={index}
+                    key={`${generation.id}-img-${index}`}
                     className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer group"
                     onClick={() => setSelectedImage(imageUrl)}
                   >

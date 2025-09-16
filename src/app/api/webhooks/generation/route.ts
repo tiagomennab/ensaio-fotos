@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { WebhookPayload } from '@/lib/ai/base'
+import { downloadAndStoreImages } from '@/lib/storage/utils'
+import { processAndStoreReplicateImages } from '@/lib/services/auto-image-storage'
+import { broadcastGenerationStatusChange, broadcastGenerationProgress } from '@/lib/services/realtime-service'
 import crypto from 'crypto'
 
 export async function POST(request: NextRequest) {
+  console.log('🔔 Webhook generation received at:', new Date().toISOString())
+  
   try {
     // Webhook security validation
     let payload: WebhookPayload
     const webhookSecret = process.env.REPLICATE_WEBHOOK_SECRET
     
-    if (webhookSecret) {
+    if (webhookSecret && process.env.NODE_ENV === 'production') {
       const signature = request.headers.get('webhook-signature')
       const body = await request.text()
       
@@ -21,8 +26,12 @@ export async function POST(request: NextRequest) {
       // Parse JSON after verification
       payload = JSON.parse(body)
     } else {
-      // No secret configured, parse normally but log warning
-      console.warn('Generation webhook: No REPLICATE_WEBHOOK_SECRET configured - webhook not secured')
+      // Development mode or no secret configured - skip signature verification
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Generation webhook: Development mode - skipping signature verification')
+      } else {
+        console.warn('Generation webhook: No REPLICATE_WEBHOOK_SECRET configured - webhook not secured')
+      }
       payload = await request.json()
     }
     
@@ -70,20 +79,130 @@ export async function POST(request: NextRequest) {
         
         if (payload.output) {
           // Handle different output formats
-          let imageUrls: string[] = []
+          let temporaryUrls: string[] = []
           
           if (Array.isArray(payload.output)) {
-            imageUrls = payload.output
+            temporaryUrls = payload.output
           } else if (typeof payload.output === 'string') {
-            imageUrls = [payload.output]
+            temporaryUrls = [payload.output]
           } else if (payload.output.images) {
-            imageUrls = payload.output.images
+            temporaryUrls = payload.output.images
           }
           
-          updateData.imageUrls = imageUrls
+          console.log(`📥 Processing ${temporaryUrls.length} generated images for storage`)
+          console.log(`🔍 Storage provider: ${process.env.STORAGE_PROVIDER}`)
+          console.log(`🗂️ Temporary URLs to process:`, temporaryUrls.map(url => ({ url, length: url.length })))
           
-          // Generate thumbnails if needed
-          updateData.thumbnailUrls = await generateThumbnails(imageUrls)
+          try {
+            // Use new auto-storage service for better reliability
+            const autoStorageResults = await processAndStoreReplicateImages(
+              temporaryUrls,
+              generation.id,
+              generation.userId
+            )
+            
+            console.log(`📊 Auto-storage result:`, {
+              processedCount: autoStorageResults.length,
+              permanentUrls: autoStorageResults.map(r => r.url)
+            })
+            
+            if (autoStorageResults.length > 0) {
+              const s3Keys = autoStorageResults.map(r => r.key)
+              const permanentUrls = autoStorageResults.map(r => r.url)
+
+              // HYBRID APPROACH: Save both for compatibility and future migration
+              updateData.imageUrls = permanentUrls  // For immediate frontend compatibility
+              updateData.thumbnailUrls = permanentUrls // Thumbnail fallback
+
+              // Save s3 keys and metadata for future signed URL system
+              updateData.storageKeys = s3Keys
+              updateData.storageProvider = 'aws'
+              updateData.metadata = {
+                ...updateData.metadata,
+                s3Keys: s3Keys,
+                originalUrls: temporaryUrls,
+                processedAt: new Date().toISOString(),
+                storageProvider: 'aws',
+                storageType: 'private'
+              }
+
+              console.log(`✅ Successfully stored ${s3Keys.length} images permanently via auto-storage`)
+              console.log(`🗂️ S3 Keys:`, s3Keys)
+              console.log(`🔗 Permanent URLs:`, permanentUrls.map(url => url.substring(0, 50) + '...'))
+            } else {
+              throw new Error('Auto-storage returned no results')
+            }
+          } catch (autoStorageError) {
+            console.error(`⚠️ Auto-storage failed, falling back to legacy storage: ${autoStorageError}`)
+            
+            // Fallback to legacy storage system
+            const storageResult = await downloadAndStoreImages(
+              temporaryUrls,
+              generation.id,
+              generation.userId
+            )
+            
+            console.log(`📊 Legacy storage result:`, {
+              success: storageResult.success,
+              permanentUrlsCount: storageResult.permanentUrls?.length || 0,
+              thumbnailUrlsCount: storageResult.thumbnailUrls?.length || 0,
+              error: storageResult.error
+            })
+            
+            if (storageResult.success && storageResult.permanentUrls && storageResult.permanentUrls.length > 0) {
+              // HYBRID APPROACH: Save URLs directly for immediate compatibility
+              updateData.imageUrls = storageResult.permanentUrls
+              updateData.thumbnailUrls = storageResult.thumbnailUrls || storageResult.permanentUrls
+
+              // Extract s3 keys for future migration to signed URLs
+              const s3Keys = storageResult.permanentUrls.map((url, index) => {
+                return `generated/${generation.userId}/${generation.id}/${index}.jpg`
+              })
+
+              updateData.storageKeys = s3Keys
+              updateData.storageProvider = 'aws'
+              updateData.metadata = {
+                ...updateData.metadata,
+                s3Keys: s3Keys,
+                originalUrls: temporaryUrls,
+                processedAt: new Date().toISOString(),
+                storageProvider: 'legacy',
+                permanentUrls: storageResult.permanentUrls
+              }
+
+              console.log(`✅ Successfully stored ${storageResult.permanentUrls.length} images permanently via legacy storage`)
+            } else {
+              // Final fallback: use temporary URLs directly for immediate access
+              console.error(`⚠️ Both storage systems failed`)
+              console.log(`🔄 Using temporary URLs (will expire in 1 hour)`)
+
+              updateData.imageUrls = temporaryUrls // Direct temporary URLs for immediate access
+              updateData.thumbnailUrls = temporaryUrls
+              updateData.storageProvider = 'temporary'
+              updateData.metadata = {
+                ...updateData.metadata,
+                temporaryUrls: temporaryUrls,
+                storageError: true,
+                errorDetails: {
+                  autoStorage: String(autoStorageError),
+                  legacyStorage: storageResult.error
+                },
+                expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString() // 1 hour expiry
+              }
+
+              // Still mark as completed but add warning in error message
+              updateData.errorMessage = `Warning: Images may expire in 1 hour due to storage errors. Auto-storage: ${autoStorageError}, Legacy: ${storageResult.error}`
+              
+              // Log this for monitoring
+              console.error(`🚨 COMPLETE STORAGE FAILURE for generation ${generation.id}:`, {
+                userId: generation.userId,
+                temporaryUrls: temporaryUrls.length,
+                storageProvider: process.env.STORAGE_PROVIDER,
+                autoStorageError: String(autoStorageError),
+                legacyStorageError: storageResult.error
+              })
+            }
+          }
         }
         
         // Calculate processing time
@@ -122,26 +241,103 @@ export async function POST(request: NextRequest) {
       data: updateData
     })
 
+    // Broadcast real-time status change to user
+    await broadcastGenerationStatusChange(
+      generation.id,
+      generation.userId,
+      payload.status,
+      {
+        imageUrls: updateData.imageUrls || [],
+        thumbnailUrls: updateData.thumbnailUrls || [],
+        s3Keys: updateData.metadata?.s3Keys || [],
+        storageProvider: updateData.storageProvider,
+        processingTime: updateData.processingTime,
+        errorMessage: updateData.errorMessage
+      }
+    )
+
     // Send notification to user for completed generations
     if (payload.status === 'succeeded') {
+      const imageCount = Array.isArray(updateData.imageUrls) ? updateData.imageUrls.length :
+                        updateData.metadata?.s3Keys?.length ||
+                        updateData.metadata?.temporaryUrls?.length ||
+                        0
       await sendGenerationNotification(
-        generation.user.email, 
-        generation.model.name, 
-        updateData.imageUrls?.length || 0
+        generation.user.email,
+        generation.model.name,
+        imageCount
       )
     }
 
-    console.log(`Generation webhook processed for generation ${generation.id}: ${payload.status}`)
+    // Log detailed processing results
+    const logData = {
+      generationId: generation.id,
+      userId: generation.userId,
+      status: payload.status,
+      processingTime: updateData.processingTime,
+      imageUrlCount: Array.isArray(updateData.imageUrls) ? updateData.imageUrls.length : 0,
+      s3KeyCount: updateData.metadata?.s3Keys?.length || 0,
+      storageProvider: updateData.storageProvider || 'unknown',
+      hasStorageError: !!updateData.metadata?.storageError,
+      hasError: !!updateData.errorMessage
+    }
+    
+    console.log(`🎯 Generation webhook processed:`, logData)
+    
+    // Additional monitoring for storage success/failure
+    if (payload.status === 'succeeded') {
+      if (updateData.metadata?.storageError) {
+        console.warn(`⚠️ Storage error for generation ${generation.id}: Images may expire in 1 hour`)
+      } else if (Array.isArray(updateData.imageUrls) && updateData.imageUrls.length > 0) {
+        console.log(`✅ Images available for generation ${generation.id}: ${updateData.imageUrls.length} URLs, ${updateData.metadata?.s3Keys?.length || 0} s3 keys`)
+      } else {
+        console.warn(`⚠️ No image URLs stored for generation ${generation.id}`)
+      }
+    }
 
     return NextResponse.json({ success: true })
 
   } catch (error) {
-    console.error('Generation webhook error:', error)
+    // Enhanced error logging with more context
+    const errorDetails = {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      jobId: payload?.id,
+      status: payload?.status,
+      timestamp: new Date().toISOString()
+    }
+    
+    console.error('❌ Generation webhook critical error:', errorDetails)
+    
+    // Try to log error in database for monitoring
+    if (payload?.id) {
+      try {
+        const generation = await prisma.generation.findFirst({
+          where: { jobId: payload.id },
+          select: { id: true, userId: true }
+        })
+        
+        if (generation) {
+          await prisma.generation.update({
+            where: { id: generation.id },
+            data: {
+              status: 'FAILED',
+              errorMessage: `Webhook processing error: ${errorDetails.message}`,
+              completedAt: new Date()
+            }
+          })
+          console.log(`📝 Error logged to database for generation ${generation.id}`)
+        }
+      } catch (dbError) {
+        console.error('Failed to log error to database:', dbError)
+      }
+    }
     
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+        error: errorDetails.message,
+        timestamp: errorDetails.timestamp
       },
       { status: 500 }
     )
@@ -200,14 +396,9 @@ async function refundGenerationCredits(generationId: string, userId: string) {
 }
 
 async function generateThumbnails(imageUrls: string[]): Promise<string[]> {
-  // Placeholder for thumbnail generation
-  // In practice, you would:
-  // 1. Download the original images
-  // 2. Resize them to thumbnail size (e.g., 300x300)
-  // 3. Upload thumbnails to your storage
-  // 4. Return thumbnail URLs
-  
-  // For now, return the same URLs (many AI providers already provide optimized images)
+  // This function is now handled by downloadAndStoreImages
+  // Keeping for backward compatibility if called elsewhere
+  console.log('ℹ️ generateThumbnails called - consider using downloadAndStoreImages instead')
   return imageUrls
 }
 

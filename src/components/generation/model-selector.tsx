@@ -18,7 +18,7 @@ interface ModelSelectorProps {
 
 export function ModelSelector({ models, selectedModelId, onModelSelect }: ModelSelectorProps) {
   const getClassIcon = (modelClass: string) => {
-    const iconClass = "w-5 h-5"
+    const iconClass = "w-3 h-3"
     
     switch (modelClass) {
       case 'MAN':
@@ -36,17 +36,17 @@ export function ModelSelector({ models, selectedModelId, onModelSelect }: ModelS
 
   const getClassLabel = (modelClass: string) => {
     const labels = {
-      MAN: 'Man',
-      WOMAN: 'Woman',
-      BOY: 'Boy',
-      GIRL: 'Girl',
+      MAN: 'Homem',
+      WOMAN: 'Mulher',
+      BOY: 'Menino',
+      GIRL: 'Menina',
       ANIMAL: 'Animal'
     }
     return labels[modelClass as keyof typeof labels] || modelClass
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
       {models.map((model) => (
         <Card
           key={model.id}
@@ -57,79 +57,53 @@ export function ModelSelector({ models, selectedModelId, onModelSelect }: ModelS
           }`}
           onClick={() => onModelSelect(model.id)}
         >
-          <CardContent className="p-4">
-            <div className="flex items-start space-x-3">
+          <CardContent className="p-2">
+            <div className="space-y-1.5">
               {/* Model Preview */}
-              <div className="flex-shrink-0">
+              <div className="aspect-square bg-gray-100 rounded-md overflow-hidden relative">
                 {model.sampleImages.length > 0 ? (
-                  <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden">
-                    <img
-                      src={model.sampleImages[0]}
-                      alt={`${model.name} sample`}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+                  <img
+                    src={model.sampleImages[0]}
+                    alt={`${model.name} sample`}
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
-                  <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <div className="w-full h-full flex items-center justify-center">
                     {getClassIcon(model.class)}
+                  </div>
+                )}
+                
+                {/* Selected Indicator Badge */}
+                {selectedModelId === model.id && (
+                  <div className="absolute top-1 right-1">
+                    <CheckCircle className="w-4 h-4 text-purple-600 bg-white rounded-full" />
                   </div>
                 )}
               </div>
 
               {/* Model Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center space-x-2 mb-1">
-                  <h3 className="font-semibold text-gray-900 truncate">
-                    {model.name}
-                  </h3>
-                  {selectedModelId === model.id && (
-                    <CheckCircle className="w-4 h-4 text-purple-600 flex-shrink-0" />
-                  )}
-                </div>
+              <div className="space-y-0.5">
+                <h3 className="font-medium text-xs text-gray-900 truncate">
+                  {model.name}
+                </h3>
                 
-                <div className="flex items-center space-x-2 mb-2">
-                  {getClassIcon(model.class)}
-                  <span className="text-sm text-gray-600">
-                    {getClassLabel(model.class)}
-                  </span>
-                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-0.5">
+                    {getClassIcon(model.class)}
+                    <span className="text-xs text-gray-600">
+                      {getClassLabel(model.class)}
+                    </span>
+                  </div>
 
-                {/* Quality Score */}
-                {model.qualityScore && (
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xs text-gray-500">Quality:</span>
-                    <Badge variant="secondary" className="text-xs">
+                  {/* Quality Score */}
+                  {model.qualityScore && (
+                    <Badge variant="secondary" className="text-xs px-1 py-0 h-4 text-xs">
                       {Math.round(model.qualityScore * 100)}%
                     </Badge>
-                  </div>
-                )}
-
-                {/* Sample Images Grid */}
-                {model.sampleImages.length > 1 && (
-                  <div className="grid grid-cols-3 gap-1 mt-2">
-                    {model.sampleImages.slice(1, 4).map((image: string, index: number) => (
-                      <div key={index} className="aspect-square bg-gray-100 rounded overflow-hidden">
-                        <img
-                          src={image}
-                          alt={`Sample ${index + 2}`}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Selected Indicator */}
-            {selectedModelId === model.id && (
-              <div className="mt-3 pt-3 border-t border-purple-200">
-                <div className="flex items-center text-purple-600 text-sm">
-                  <CheckCircle className="w-4 h-4 mr-1" />
-                  Selected for generation
+                  )}
                 </div>
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
       ))}

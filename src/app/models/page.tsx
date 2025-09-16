@@ -7,6 +7,7 @@ import { Plus, Users, Clock, CheckCircle, AlertCircle, XCircle, Trash2, Eye, Pla
 import Link from 'next/link'
 import { ModelCard } from '@/components/models/model-card'
 import { ModelStats } from '@/components/models/model-stats'
+import { RealtimeModelList } from '@/components/models/realtime-model-list'
 
 export default async function ModelsPage() {
   const session = await requireAuth()
@@ -40,14 +41,6 @@ export default async function ModelsPage() {
               </p>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <Badge variant="secondary" className="mb-1">
-                  Plano {session.user.plan}
-                </Badge>
-                <p className="text-xs text-gray-500">
-                  {activeModels}/{modelLimits.limit === 10 ? '∞' : modelLimits.limit} modelos
-                </p>
-              </div>
               {canCreate ? (
                 <Button asChild>
                   <Link href="/models/create">
@@ -92,7 +85,7 @@ export default async function ModelsPage() {
               {!canCreate && (
                 <div className="mt-2">
                   <Badge variant="outline" className="text-amber-600 border-amber-300">
-                    Limite do {session.user.plan} atingido
+                    Limite atingido
                   </Badge>
                 </div>
               )}
@@ -207,52 +200,10 @@ export default async function ModelsPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-8">
-            {/* Ready Models */}
-            {modelsByStatus.ready.length > 0 && (
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                  <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
-                  Modelos Prontos ({modelsByStatus.ready.length})
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {modelsByStatus.ready.map((model) => (
-                    <ModelCard key={model.id} model={model} />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Training Models */}
-            {modelsByStatus.training.length > 0 && (
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                  <Clock className="w-5 h-5 text-yellow-500 mr-2" />
-                  Modelos em Treinamento ({modelsByStatus.training.length})
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {modelsByStatus.training.map((model) => (
-                    <ModelCard key={model.id} model={model} showProgress />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Error Models */}
-            {modelsByStatus.error.length > 0 && (
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                  <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
-                  Modelos com Erros ({modelsByStatus.error.length})
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {modelsByStatus.error.map((model) => (
-                    <ModelCard key={model.id} model={model} showError />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <RealtimeModelList 
+            initialModels={models} 
+            userId={userId}
+          />
         )}
 
         {/* Quick Actions */}

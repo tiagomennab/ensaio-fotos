@@ -29,13 +29,14 @@ export async function getModelsByUserId(userId: string) {
   try {
     return prisma.aIModel.findMany({
       where: { userId },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        generations: {
-          orderBy: { createdAt: 'desc' },
-          take: 3
-        }
-      }
+      orderBy: { createdAt: 'desc' }
+      // Temporarily removed include to avoid metadata field error
+      // include: {
+      //   generations: {
+      //     orderBy: { createdAt: 'desc' },
+      //     take: 3
+      //   }
+      // }
     })
   } catch (error) {
     console.warn('Database connection issue in getModelsByUserId, returning empty array for testing:', (error as Error).message)

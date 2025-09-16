@@ -50,16 +50,17 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
               </p>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-600">
-                {session.user.creditsUsed}/{session.user.creditsLimit} créditos usados
-              </div>
-              <div className="w-24 bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-purple-600 h-2 rounded-full"
-                  style={{ 
-                    width: `${Math.min((session.user.creditsUsed / session.user.creditsLimit) * 100, 100)}%` 
-                  }}
-                />
+              <div className="flex items-center space-x-3 bg-gradient-to-r from-[#667EEA]/10 to-[#764BA2]/10 px-4 py-2 rounded-full border border-[#667EEA]/20">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-[#667EEA] rounded-full"></div>
+                  <span className="text-sm font-medium text-gray-700">
+                    {session.user.creditsLimit - session.user.creditsUsed} créditos restantes
+                  </span>
+                </div>
+                <div className="w-px h-4 bg-gray-300"></div>
+                <div className="text-xs text-gray-500">
+                  {session.user.creditsUsed}/{session.user.creditsLimit} usado
+                </div>
               </div>
             </div>
           </div>

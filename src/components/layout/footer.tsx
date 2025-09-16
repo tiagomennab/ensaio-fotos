@@ -140,7 +140,7 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="border-t border-gray-200 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-sm text-gray-500">
-            © {currentYear} VibePhoto. Todos os direitos reservados.
+            © {currentYear} VibePhoto™. Todos os direitos reservados.
           </div>
           <div className="flex items-center gap-6 text-sm text-gray-500">
             <span className="flex items-center gap-2">

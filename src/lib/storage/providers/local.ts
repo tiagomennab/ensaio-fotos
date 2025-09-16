@@ -40,20 +40,20 @@ export class LocalStorageProvider extends StorageProvider {
       } else {
         buffer = file
         originalName = options.filename || 'uploaded-file'
-        mimeType = 'image/jpeg'
+        mimeType = options.isVideo ? 'video/mp4' : 'image/jpeg'
         size = buffer.length
       }
 
       // Validate file if it's a File object
       if (file instanceof File) {
-        const validation = this.validateFile(file)
+        const validation = this.validateFile(file, options.isVideo)
         if (!validation.isValid) {
           throw new StorageError(validation.error!, 'VALIDATION_ERROR', 400)
         }
       }
 
-      // Process image if options are provided
-      if (options.maxWidth || options.maxHeight || options.quality) {
+      // Process image if options are provided (skip for videos)
+      if (!options.isVideo && (options.maxWidth || options.maxHeight || options.quality)) {
         buffer = await this.processImage(buffer, options)
         size = buffer.length
       }
@@ -121,12 +121,103 @@ export class LocalStorageProvider extends StorageProvider {
     return `/uploads/${key}`
   }
 
-  validateFile(file: File): FileValidation {
-    // Check file size
-    if (file.size > STORAGE_CONFIG.limits.maxFileSize) {
+  /**
+   * Generate a signed URL for the local file
+   * Since local files are served via public URLs, we just return the public URL
+   * @param key File key
+   * @param expiresIn Not used for local storage (files are public)
+   * @returns Public URL for the file
+   */
+  async getSignedUrl(key: string, expiresIn?: number): Promise<string> {
+    // For local storage, files are already public, so we just return the public URL
+    return this.getPublicUrl(key)
+  }
+
+  /**
+   * Upload a file from a URL to local storage
+   * @param url Source URL to download from
+   * @param path Local path to store the file
+   * @param options Upload options
+   * @returns UploadResult with the uploaded file information
+   */
+  async uploadFromUrl(url: string, uploadPath: string, options: UploadOptions = {}): Promise<UploadResult> {
+    try {
+      console.log(`📥 Downloading from URL for local storage: ${url}`)
+      
+      // Fetch the file from the URL
+      const response = await fetch(url)
+      
+      if (!response.ok) {
+        throw new StorageError(
+          `Failed to download from URL: ${response.status} ${response.statusText}`,
+          'URL_DOWNLOAD_ERROR',
+          response.status
+        )
+      }
+
+      // Get content type from response headers
+      const contentType = response.headers.get('content-type') || (options.isVideo ? 'video/mp4' : 'image/jpeg')
+      
+      // Convert to buffer
+      const buffer = Buffer.from(await response.arrayBuffer())
+      
+      console.log(`📦 Downloaded ${buffer.length} bytes for local storage, content-type: ${contentType}`)
+
+      // Extract filename from URL or use provided filename
+      const filename = options.filename || this.extractFilenameFromUrl(url, options.isVideo)
+      
+      // Upload using the existing upload method
+      return await this.upload(buffer, uploadPath, {
+        ...options,
+        filename
+      })
+      
+    } catch (error) {
+      if (error instanceof StorageError) {
+        throw error
+      }
+      throw new StorageError(
+        `Failed to upload from URL to local storage: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'URL_UPLOAD_ERROR'
+      )
+    }
+  }
+
+  private extractFilenameFromUrl(url: string, isVideo?: boolean): string {
+    try {
+      const urlObj = new URL(url)
+      const pathname = urlObj.pathname
+      const segments = pathname.split('/')
+      const filename = segments[segments.length - 1]
+      
+      // If filename has extension, return it
+      if (filename.includes('.')) {
+        return filename
+      }
+      
+      // Generate a filename with appropriate extension
+      const timestamp = Date.now()
+      const randomString = Math.random().toString(36).substring(2, 15)
+      const extension = isVideo ? 'mp4' : 'jpg'
+      
+      return `${timestamp}-${randomString}.${extension}`
+    } catch (error) {
+      // If URL parsing fails, generate a random filename
+      const timestamp = Date.now()
+      const randomString = Math.random().toString(36).substring(2, 15)
+      const extension = isVideo ? 'mp4' : 'jpg'
+      
+      return `${timestamp}-${randomString}.${extension}`
+    }
+  }
+
+  validateFile(file: File, isVideo?: boolean): FileValidation {
+    // Check file size based on type
+    const maxSize = isVideo ? STORAGE_CONFIG.limits.maxVideoSize : STORAGE_CONFIG.limits.maxFileSize
+    if (file.size > maxSize) {
       return {
         isValid: false,
-        error: `File size exceeds maximum allowed size of ${STORAGE_CONFIG.limits.maxFileSize / 1024 / 1024}MB`
+        error: `File size exceeds maximum allowed size of ${maxSize / 1024 / 1024}MB`
       }
     }
 

@@ -30,7 +30,8 @@ const plans: Plan[] = [
     features: [
       '1 modelo de IA por mês',
       '50 créditos por mês',
-      'Resolução padrão'
+      'Resolução padrão',
+      'Processamento padrão'
     ],
     popular: false,
     color: 'blue'
@@ -45,7 +46,8 @@ const plans: Plan[] = [
     features: [
       '3 modelos de IA por mês',
       '200 créditos por mês',
-      'Alta resolução'
+      'Alta resolução',
+      'Processamento prioritário'
     ],
     popular: true,
     color: 'purple'
@@ -60,7 +62,8 @@ const plans: Plan[] = [
     features: [
       '10 modelos de IA por mês',
       '1000 créditos por mês',
-      'Máxima resolução'
+      'Máxima resolução',
+      'Processamento rápido'
     ],
     popular: false,
     color: 'yellow'

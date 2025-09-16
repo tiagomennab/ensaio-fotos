@@ -27,7 +27,11 @@ import {
   UserCircle,
   Menu,
   ChevronDown,
-  BarChart3
+  BarChart3,
+  History,
+  MessageSquare,
+  Coins,
+  Edit3
 } from 'lucide-react'
 import { VibePhotoLogo } from '@/components/ui/vibephoto-logo'
 
@@ -95,6 +99,12 @@ export function Navigation({
       description: 'Criar fotos'
     },
     {
+      href: '/editor',
+      label: 'Editor IA',
+      icon: Edit3,
+      description: 'Editar fotos com Nano Banana'
+    },
+    {
       href: '/gallery',
       label: 'Galeria',
       icon: FolderOpen,
@@ -105,43 +115,53 @@ export function Navigation({
       label: 'Pacotes',
       icon: Package,
       description: 'Coleções de prompts'
+    },
+    {
+      href: '/credits',
+      label: 'Créditos',
+      icon: Coins,
+      description: 'Comprar créditos'
     }
   ]
 
   return (
     <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur border-b border-gray-200" role="navigation" aria-label="Primary">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" data-testid="site-navbar">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/dashboard">
-            <VibePhotoLogo size="md" showText={true} />
-          </Link>
-
-          {/* Navigation Links */}
-          <div className="hidden md:flex items-center space-x-1">
-            {navItems.map((item) => {
-              const Icon = item.icon
-              const isActive = pathname.startsWith(item.href)
-              
-              return (
-                <Link key={item.href} href={item.href}>
-                  <button
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-full font-medium transition-all duration-300 border-2 border-transparent ${
-                      isActive 
-                        ? 'bg-gray-800 text-white shadow-lg hover:bg-gray-900 hover:shadow-xl hover:-translate-y-0.5' 
-                        : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-200 hover:shadow-md hover:-translate-y-0.5'
-                    }`}
-                  >
-                    <Icon className={`w-4 h-4 transition-all duration-300 ${isActive ? 'text-white' : ''}`} />
-                    <span className={`transition-all duration-300 ${isActive ? 'text-white' : ''}`}>{item.label}</span>
-                  </button>
-                </Link>
-              )
-            })}
+          <div className="flex-shrink-0">
+            <Link href="/dashboard">
+              <VibePhotoLogo size="md" showText={true} />
+            </Link>
           </div>
 
-          {/* User Section (no credits/notifications to avoid duplication with page headers) */}
-          <div className="flex items-center space-x-3">
+          {/* Navigation Links - Centered */}
+          <div className="hidden md:flex items-center justify-center flex-1 mx-8">
+            <div className="flex items-center space-x-2">
+              {navItems.map((item) => {
+                const Icon = item.icon
+                const isActive = pathname.startsWith(item.href)
+                
+                return (
+                  <Link key={item.href} href={item.href}>
+                    <button
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-full font-medium transition-all duration-300 border-2 border-transparent ${
+                        isActive 
+                          ? 'bg-gray-800 text-white shadow-lg hover:bg-gray-900 hover:shadow-xl hover:-translate-y-0.5' 
+                          : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-200 hover:shadow-md hover:-translate-y-0.5'
+                      }`}
+                    >
+                      <Icon className={`w-4 h-4 transition-all duration-300 ${isActive ? 'text-white' : ''}`} />
+                      <span className={`transition-all duration-300 ${isActive ? 'text-white' : ''}`}>{item.label}</span>
+                    </button>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* User Section */}
+          <div className="flex items-center flex-shrink-0">
             {/* User Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -170,8 +190,8 @@ export function Navigation({
                       {userEmail || session?.user?.email}
                     </p>
                     {effectivePlan && (
-                      <Badge variant="secondary" className="w-fit mt-1">
-                        Plano {String(effectivePlan)}
+                      <Badge className="w-fit mt-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] text-white font-medium text-xs px-2 py-1 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200">
+                        {String(effectivePlan)}
                       </Badge>
                     )}
                   </div>
@@ -179,27 +199,33 @@ export function Navigation({
                 
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href="/settings/account" className="cursor-pointer">
-                    <UserCircle className="mr-2 h-4 w-4" />
-                    <span>Conta</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
                   <Link href="/billing" className="cursor-pointer">
                     <CreditCard className="mr-2 h-4 w-4" />
-                    <span>Faturamento</span>
+                    <span>Minha Assinatura</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/dashboard" className="cursor-pointer">
-                    <FolderOpen className="mr-2 h-4 w-4" />
-                    <span>Espaço de trabalho</span>
+                  <Link href="/dashboard/credits" className="cursor-pointer">
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    <span>Dashboard de Créditos</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/credits/history" className="cursor-pointer">
+                    <History className="mr-2 h-4 w-4" />
+                    <span>Histórico de Créditos</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/profile" className="cursor-pointer">
+                    <UserCircle className="mr-2 h-4 w-4" />
+                    <span>Perfil</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/support" className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Suporte</span>
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    <span>Fale Conosco</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -212,7 +238,7 @@ export function Navigation({
         {/* Mobile Navigation */}
         <div className="md:hidden">
           <div className="flex justify-between items-center py-3 border-t border-gray-100">
-            <div className="grid grid-cols-5 gap-1 flex-1">
+            <div className="grid grid-cols-6 gap-1 flex-1">
               {navItems.map((item) => {
                 const Icon = item.icon
                 const isActive = pathname.startsWith(item.href)

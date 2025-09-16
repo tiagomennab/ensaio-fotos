@@ -22,12 +22,22 @@ const faqData: FAQItem[] = [
   {
     category: 'geral',
     question: 'Como funciona o sistema de créditos?',
-    answer: 'Cada geração de foto consome créditos do seu plano. O plano Starter oferece 50 créditos/mês, Premium 200 créditos/mês e Gold 1000 créditos/mês. Os créditos são renovados mensalmente e não acumulam entre os períodos.'
+    answer: 'Cada geração de foto consome créditos do seu plano. O plano Starter oferece 500 créditos/mês, Premium 1200 créditos/mês e Gold 2500 créditos/mês. Os créditos são renovados mensalmente e não acumulam entre os períodos. Você também pode comprar pacotes de créditos únicos que são válidos por 1 ano.'
   },
   {
     category: 'geral',
     question: 'Posso usar as fotos geradas comercialmente?',
     answer: 'Sim! Todas as fotos geradas pela nossa IA são de sua propriedade e podem ser usadas para fins comerciais, redes sociais, marketing pessoal, portfólios e qualquer outro propósito que desejar.'
+  },
+  {
+    category: 'geral',
+    question: 'Quantos modelos de IA posso criar com cada plano?',
+    answer: 'O plano Starter permite 1 modelo de IA por mês, o Premium permite 2 modelos por mês, e o Gold permite 5 modelos por mês. Os pacotes de créditos únicos não incluem treinamento de modelos - você precisaria de um plano de assinatura ativo para treinar novos modelos.'
+  },
+  {
+    category: 'geral',
+    question: 'Qual o melhor plano para iniciantes?',
+    answer: 'Para iniciantes, recomendamos o plano Premium (R$ 179/mês) que oferece 1200 créditos, 2 modelos de IA e processamento rápido. Se você quer apenas testar, pode começar com o Pacote Avançado (R$ 179) que oferece 1000 créditos únicos válidos por 1 ano.'
   },
   
   // Funcionamento
@@ -49,7 +59,7 @@ const faqData: FAQItem[] = [
   {
     category: 'funcionamento',
     question: 'Qual a qualidade das fotos geradas?',
-    answer: 'Nossas fotos são geradas em alta resolução (até 1024x1024 pixels) com qualidade profissional. A qualidade final depende da qualidade das fotos de treinamento e da complexidade do prompt solicitado.'
+    answer: 'A qualidade das fotos varia conforme seu plano e o tipo de pacote utilizado. Planos de assinatura oferecem maior resolução e processamento prioritário. Pacotes de créditos únicos também têm especificações próprias de qualidade. Pacotes de fotos premium garantem resultados com maior fidelidade e detalhamento. A qualidade final também depende da qualidade das suas fotos de treinamento.'
   },
   {
     category: 'funcionamento',
@@ -76,7 +86,22 @@ const faqData: FAQItem[] = [
   {
     category: 'pagamento',
     question: 'O que acontece se eu ultrapassar meu limite de créditos?',
-    answer: 'Quando seus créditos acabarem, você não conseguirá gerar novas fotos até o próximo período de renovação ou upgrade de plano. Você pode fazer upgrade a qualquer momento para obter mais créditos imediatamente.'
+    answer: 'Quando seus créditos acabarem, você não conseguirá gerar novas fotos até o próximo período de renovação ou upgrade de plano. Você pode fazer upgrade a qualquer momento ou comprar um pacote de créditos únicos para obter mais créditos imediatamente.'
+  },
+  {
+    category: 'pagamento',
+    question: 'Qual a diferença entre planos de assinatura e pacotes de créditos?',
+    answer: 'Os planos de assinatura (Starter, Premium, Gold) renovam automaticamente a cada mês com créditos novos, além de incluir benefícios como múltiplos modelos de IA e processamento prioritário. Os pacotes de créditos únicos são compras únicas (Essencial, Avançado, Pro, Enterprise) que não renovam, são válidos por 1 ano e ideais para uso esporádico.'
+  },
+  {
+    category: 'pagamento',
+    question: 'Os pacotes de créditos únicos expiram?',
+    answer: 'Sim, os créditos dos pacotes únicos são válidos por 1 ano após a compra. Após esse período, os créditos não utilizados expiram. Recomendamos o uso dentro do prazo de validade para aproveitar ao máximo seu investimento.'
+  },
+  {
+    category: 'pagamento',
+    question: 'Posso combinar plano de assinatura com pacotes de créditos?',
+    answer: 'Sim! Você pode ter um plano de assinatura ativo e ainda comprar pacotes de créditos únicos quando necessário. Os créditos são consumidos primeiro dos pacotes únicos (por ordem de expiração) e depois dos créditos mensais da assinatura.'
   },
   
   // Privacidade
@@ -120,7 +145,17 @@ const faqData: FAQItem[] = [
   {
     category: 'tecnico',
     question: 'O serviço funciona offline?',
-    answer: 'Não, o Ensaio Fotos é um serviço online que requer conexão com a internet para funcionar. O processamento de IA acontece em nossos servidores para garantir a máxima qualidade e velocidade.'
+    answer: 'Não, o Vibe Photo é um serviço online que requer conexão com a internet para funcionar. O processamento de IA acontece em nossos servidores para garantir a máxima qualidade e velocidade.'
+  },
+  {
+    category: 'funcionamento',
+    question: 'Quantos créditos cada foto consome?',
+    answer: 'Cada foto gerada consome exatamente 10 créditos, independentemente do plano, pacote ou estilo escolhido. Isso significa que com 100 créditos você pode gerar 10 fotos, com 500 créditos pode gerar 50 fotos, e assim por diante.'
+  },
+  {
+    category: 'pagamento',
+    question: 'Qual é o valor dos pacotes de créditos únicos?',
+    answer: 'Oferecemos 4 opções: Pacote Essencial (R$ 89 - 350 créditos), Pacote Avançado (R$ 179 - 1000 créditos), Pacote Pro (R$ 359 - 2200 créditos) e Pacote Enterprise (R$ 899 - 5000 créditos). Todos são válidos por 1 ano.'
   }
 ]
 

@@ -145,7 +145,7 @@ export class AnalyticsTracker {
       favoriteStyle,
       joinDate: user?.createdAt || new Date(),
       lastActivity: user?.updatedAt || new Date(),
-      planUpgrades: (user as any)?.plan !== 'FREE' ? 1 : 0 // Basic tracking: if user has paid plan
+      planUpgrades: (user as any)?.plan !== 'STARTER' ? 1 : 0 // Basic tracking: if user has paid plan
     }
   }
 

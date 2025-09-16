@@ -23,19 +23,33 @@ export async function middleware(request: NextRequest) {
       secret: process.env.NEXTAUTH_SECRET 
     })
 
+    // Check if this is an API route
+    const isApiRoute = pathname.startsWith('/api/')
+    
     // Protect dashboard and other authenticated routes
     const protectedPaths = ['/dashboard', '/models', '/generate', '/billing', '/gallery']
+    const protectedApiPaths = ['/api/generations', '/api/models', '/api/gallery', '/api/media', '/api/upscale', '/api/video']
+    
     const isProtectedPath = protectedPaths.some(path => pathname.startsWith(path))
+    const isProtectedApiPath = protectedApiPaths.some(path => pathname.startsWith(path))
 
-    if (isProtectedPath && !token) {
-      // Redirect to sign in for protected routes
-      const signInUrl = new URL('/auth/signin', request.url)
-      signInUrl.searchParams.set('callbackUrl', request.url)
-      return NextResponse.redirect(signInUrl)
+    if ((isProtectedPath || isProtectedApiPath) && !token) {
+      if (isApiRoute) {
+        // Return JSON error for API routes
+        return NextResponse.json(
+          { error: 'Authentication required', code: 'UNAUTHORIZED' },
+          { status: 401 }
+        )
+      } else {
+        // Redirect to sign in for web routes
+        const signInUrl = new URL('/auth/signin', request.url)
+        signInUrl.searchParams.set('callbackUrl', request.url)
+        return NextResponse.redirect(signInUrl)
+      }
     }
 
     // Check if user has active plan for premium features
-    if (token && isProtectedPath) {
+    if (token && (isProtectedPath || isProtectedApiPath)) {
       const userPlan = token.plan as string
       
       // Allow access to billing pages for plan management
@@ -43,11 +57,25 @@ export async function middleware(request: NextRequest) {
         return NextResponse.next()
       }
       
-      // Redirect users without active plan to pricing page
+      // Check if user needs a premium plan
       if (!userPlan || userPlan === 'FREE' || userPlan === 'TRIAL') {
-        const pricingUrl = new URL('/pricing', request.url)
-        pricingUrl.searchParams.set('required', 'true')
-        return NextResponse.redirect(pricingUrl)
+        if (isApiRoute || isProtectedApiPath) {
+          // Return JSON error for API routes
+          return NextResponse.json(
+            { 
+              error: 'Premium plan required', 
+              code: 'PLAN_REQUIRED',
+              userPlan: userPlan || 'FREE',
+              upgradeUrl: '/pricing'
+            },
+            { status: 403 }
+          )
+        } else {
+          // Redirect to pricing page for web routes
+          const pricingUrl = new URL('/pricing', request.url)
+          pricingUrl.searchParams.set('required', 'true')
+          return NextResponse.redirect(pricingUrl)
+        }
       }
     }
 

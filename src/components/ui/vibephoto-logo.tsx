@@ -77,7 +77,7 @@ export function VibePhotoLogo({
       {/* App Name */}
       {showText && layout !== 'iconOnly' && (
         <div className={`${currentSize.text} ${textMargin} ${getTextColor()} font-light tracking-tight`}>
-          <span className="text-[#667EEA] font-medium">Vibe</span>Photo
+          <span className="text-[#667EEA] font-medium">Vibe</span>Photo<span className="text-xs ml-0.5 opacity-70">™</span>
         </div>
       )}
     </div>

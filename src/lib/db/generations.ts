@@ -13,31 +13,64 @@ export async function createGeneration(data: {
   seed?: number
   style?: string
 }) {
-  return prisma.generation.create({
-    data: {
-      ...data,
-      status: GenerationStatus.PENDING,
-      imageUrls: [],
-      thumbnailUrls: []
-    },
-    include: {
-      model: {
-        select: { id: true, name: true, class: true }
-      }
+  // Calculate credits needed (10 credits per image, variations determines how many images)
+  const creditsNeeded = (data.variations || 1) * 10
+
+  // Start transaction to ensure atomicity
+  return prisma.$transaction(async (tx) => {
+    // Check if user has enough credits (simplified version without creditsBalance)
+    const user = await tx.user.findUnique({
+      where: { id: data.userId },
+      select: { creditsUsed: true, creditsLimit: true }
+    })
+
+    if (!user) {
+      throw new Error('User not found')
     }
+
+    const availableCredits = user.creditsLimit - user.creditsUsed
+    if (availableCredits < creditsNeeded) {
+      throw new Error(`Insufficient credits. Need ${creditsNeeded} credits but only have ${availableCredits} available.`)
+    }
+
+    // Deduct credits from user (simple version - just increment creditsUsed)
+    await tx.user.update({
+      where: { id: data.userId },
+      data: {
+        creditsUsed: { increment: creditsNeeded }
+      }
+    })
+
+    // Create the generation
+    return tx.generation.create({
+      data: {
+        ...data,
+        status: GenerationStatus.PENDING,
+        imageUrls: [],
+        thumbnailUrls: [],
+        estimatedCost: creditsNeeded
+      },
+      include: {
+        model: {
+          select: { id: true, name: true, class: true }
+        }
+      }
+    })
   })
 }
 
 export async function getGenerationsByUserId(
-  userId: string, 
-  page = 1, 
+  userId: string,
+  page = 1,
   limit = 20,
-  modelId?: string
+  modelId?: string,
+  status?: string
 ) {
   const skip = (page - 1) * limit
   const where = {
     userId,
-    ...(modelId && { modelId })
+    ...(modelId && { modelId }),
+    ...(status && { status })
   }
   
   const [generations, total] = await Promise.all([
@@ -170,11 +203,13 @@ export async function searchGenerations(
   userId: string,
   query: string,
   page = 1,
-  limit = 20
+  limit = 20,
+  status?: string
 ) {
   const skip = (page - 1) * limit
   const where = {
     userId,
+    ...(status && { status }),
     OR: [
       { prompt: { contains: query, mode: 'insensitive' as const } },
       { model: { name: { contains: query, mode: 'insensitive' as const } } }

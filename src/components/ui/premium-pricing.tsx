@@ -29,6 +29,7 @@ export function PremiumPricing() {
         '50 gerações por mês',
         '1 modelo personalizado',
         'Qualidade HD',
+        'Processamento padrão',
         'Suporte por email',
         'Templates básicos'
       ],
@@ -44,6 +45,7 @@ export function PremiumPricing() {
         '200 gerações por mês',
         '5 modelos personalizados',
         'Qualidade 4K',
+        'Processamento prioritário',
         'Suporte prioritário',
         'Templates premium',
         'Edição avançada',
@@ -62,6 +64,7 @@ export function PremiumPricing() {
         '1000 gerações por mês',
         '20 modelos personalizados',
         'Qualidade 8K',
+        'Processamento rápido',
         'Suporte 24/7',
         'Templates exclusivos',
         'IA avançada',
