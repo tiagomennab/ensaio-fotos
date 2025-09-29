@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Play, Eye, Download, Trash2, Users, Clock, CheckCircle, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ModelStats } from '@/components/models/model-stats'
 import { formatDate } from '@/lib/utils'
 
 interface ModelPageProps {
@@ -61,16 +60,9 @@ export default async function ModelPage({ params }: ModelPageProps) {
     }
   }
 
-  const statsData = {
-    totalGenerations: modelStats.totalGenerations,
-    averageProcessingTime: modelStats.averageProcessingTime,
-    totalCreditsUsed: modelStats.totalGenerations * 1, // Assuming 1 credit per generation
-    successRate: 95, // This would need to be calculated from actual data
-    popularPrompts: [] // This would need to be implemented in the stats function
-  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50" style={{fontFamily: '"-apple-system", "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif'}}>
       {/* Header */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -78,80 +70,117 @@ export default async function ModelPage({ params }: ModelPageProps) {
             <div className="flex items-center space-x-4">
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/models">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
                   Voltar aos Modelos
                 </Link>
               </Button>
               <div>
-                <div className="flex items-center space-x-3">
-                  {getStatusIcon()}
-                  <h1 className="text-3xl font-bold text-gray-900">{model.name}</h1>
-                  <Badge className={getStatusColor()}>
-                    {model.status}
-                  </Badge>
-                </div>
-                <p className="text-gray-600 mt-1 capitalize">
-                  {model.class.toLowerCase().replace('_', ' ')} • Criado em {formatDate(model.createdAt)}
-                </p>
+                <h1 className="text-4xl font-semibold text-gray-900" style={{fontFamily: '"-apple-system", "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif'}}>{model.name}</h1>
               </div>
             </div>
             
-            <div className="flex items-center space-x-3">
-              {model.status === 'READY' && (
-                <Button asChild>
-                  <Link href={`/generate?model=${model.id}`}>
-                    <Play className="w-4 h-4 mr-2" />
-                    Gerar Fotos
-                  </Link>
-                </Button>
-              )}
-              <Button variant="outline" asChild>
-                <Link href={`/gallery?model=${model.id}`}>
-                  <Eye className="w-4 h-4 mr-2" />
-                  Ver Galeria
-                </Link>
-              </Button>
-            </div>
           </div>
         </div>
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Model Details */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Training Progress */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Left Column - Cards principais */}
+          <div className="lg:col-span-3">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Detalhes */}
+              <Card className="bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600 text-white shadow-xl">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-white text-xl font-semibold">Detalhes</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 gap-4 text-sm">
+                    <div className="flex justify-between items-center py-2 border-b border-slate-600/50">
+                      <span className="text-slate-300">Título</span>
+                      <span className="font-semibold text-white">{model.name}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-slate-600/50">
+                      <span className="text-slate-300">Classe</span>
+                      <span className="font-semibold capitalize text-white">{model.class.toLowerCase()}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-slate-600/50">
+                      <span className="text-slate-300">Total de Gerações</span>
+                      <span className="font-semibold text-white">{modelStats.totalGenerations}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-slate-600/50">
+                      <span className="text-slate-300">Criado</span>
+                      <span className="font-semibold text-white">{formatDate(model.createdAt)}</span>
+                    </div>
+                    {model.qualityScore && (
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-slate-300">Pontuação de Qualidade</span>
+                        <span className="font-semibold text-white">{Math.round(model.qualityScore * 100)}%</span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Dados de Treinamento */}
+              <Card className="bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600 text-white shadow-xl">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-white text-xl font-semibold">Dados de Treinamento</CardTitle>
+                  <CardDescription className="text-slate-300">
+                    Fotos usadas para treinar este modelo
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center py-2 border-b border-slate-600/50">
+                    <span className="text-sm text-slate-300">Total de Fotos</span>
+                    <span className="font-semibold text-white">{model.totalPhotos}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-slate-600/50">
+                    <span className="text-sm text-slate-300">Fotos do Rosto</span>
+                    <span className="font-semibold text-white">{model.facePhotos?.length || 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-slate-600/50">
+                    <span className="text-sm text-slate-300">Fotos de Meio Corpo</span>
+                    <span className="font-semibold text-white">{model.halfBodyPhotos?.length || 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-sm text-slate-300">Fotos de Corpo Inteiro</span>
+                    <span className="font-semibold text-white">{model.fullBodyPhotos?.length || 0}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Training Progress - Full width */}
             {['TRAINING', 'PROCESSING', 'UPLOADING'].includes(model.status) && (
-              <Card>
+              <Card className="mt-6 bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600 text-white shadow-xl">
                 <CardHeader>
-                  <CardTitle>Progresso do Treinamento</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-white text-xl font-semibold">Progresso do Treinamento</CardTitle>
+                  <CardDescription className="text-slate-300">
                     Seu modelo está sendo treinado atualmente
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     <div>
-                      <div className="flex justify-between text-sm text-gray-600 mb-2">
+                      <div className="flex justify-between text-sm text-slate-300 mb-2">
                         <span>Progresso</span>
                         <span>{model.progress}%</span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div className="w-full bg-slate-600 rounded-full h-3">
                         <div
-                          className="bg-blue-600 h-3 rounded-full transition-all duration-300"
+                          className="bg-blue-500 h-3 rounded-full transition-all duration-300"
                           style={{ width: `${model.progress}%` }}
                         />
                       </div>
                     </div>
-                    
+
                     {model.estimatedTime && (
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-slate-300">
                         Tempo estimado restante: ~{model.estimatedTime} minutos
                       </p>
                     )}
-                    
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <p className="text-blue-800 text-sm">
+
+                    <div className="bg-slate-600 border border-slate-500 rounded-lg p-4">
+                      <p className="text-slate-200 text-sm">
                         <strong>O que está acontecendo:</strong> Suas fotos estão sendo processadas e o modelo de IA está aprendendo suas características únicas. Você receberá um email quando o treinamento estiver completo.
                       </p>
                     </div>
@@ -162,24 +191,24 @@ export default async function ModelPage({ params }: ModelPageProps) {
 
             {/* Error State */}
             {model.status === 'ERROR' && (
-              <Card className="border-red-200">
+              <Card className="mt-6 bg-gradient-to-br from-red-700 to-red-800 border border-red-600 text-white shadow-xl">
                 <CardHeader>
-                  <CardTitle className="text-red-800">Erro no Treinamento</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-white text-xl font-semibold">Erro no Treinamento</CardTitle>
+                  <CardDescription className="text-red-200">
                     Houve um problema ao treinar seu modelo
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-                    <p className="text-red-800 text-sm">
+                  <div className="bg-red-600 border border-red-500 rounded-lg p-4 mb-4">
+                    <p className="text-red-100 text-sm">
                       {model.errorMessage || 'Um erro desconhecido ocorreu durante o treinamento.'}
                     </p>
                   </div>
                   <div className="flex space-x-3">
-                    <Button variant="outline">
+                    <Button variant="outline" className="border-red-400 text-red-100 hover:bg-red-600">
                       Tentar Novamente
                     </Button>
-                    <Button variant="outline">
+                    <Button variant="outline" className="border-red-400 text-red-100 hover:bg-red-600">
                       Contatar Suporte
                     </Button>
                   </div>
@@ -187,32 +216,17 @@ export default async function ModelPage({ params }: ModelPageProps) {
               </Card>
             )}
 
-            {/* Model Statistics */}
-            {model.status === 'READY' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Estatísticas do Modelo</CardTitle>
-                  <CardDescription>
-                    Métricas de desempenho e uso para este modelo
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ModelStats stats={statsData} />
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Sample Images */}
+            {/* Sample Images - Full width */}
             {model.sampleImages && model.sampleImages.length > 0 && (
-              <Card>
+              <Card className="mt-6 bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600 text-white shadow-xl">
                 <CardHeader>
-                  <CardTitle>Resultados de Exemplo</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-white text-xl font-semibold">Resultados de Exemplo</CardTitle>
+                  <CardDescription className="text-slate-300">
                     Exemplos de fotos geradas com este modelo
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {(model.sampleImages as string[]).map((image: string, index: number) => (
                       <div key={`${model.id}-sample-${index}`} className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
                         <img
@@ -226,131 +240,25 @@ export default async function ModelPage({ params }: ModelPageProps) {
                 </CardContent>
               </Card>
             )}
-
-            {/* Recent Generations */}
-            {recentGenerations.generations.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Gerações Recentes</CardTitle>
-                  <CardDescription>
-                    Últimas fotos criadas com este modelo
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {recentGenerations.generations.slice(0, 5).map((generation) => (
-                      <div key={generation.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                        <div className="flex-1">
-                          <p className="font-medium truncate max-w-md">
-                            {generation.prompt}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            {formatDate(generation.createdAt)} • {generation.imageUrls.length} imagens
-                          </p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Badge variant="secondary">
-                            {generation.status}
-                          </Badge>
-                          <Button size="sm" variant="outline" asChild>
-                            <Link href={`/gallery?generation=${generation.id}`}>
-                              Ver
-                            </Link>
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                    
-                    {recentGenerations.generations.length > 5 && (
-                      <Button variant="outline" asChild className="w-full">
-                        <Link href={`/gallery?model=${model.id}`}>
-                          Ver Todas as Gerações
-                        </Link>
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
 
-          {/* Right Column - Model Info */}
+          {/* Right Column - Actions */}
           <div className="space-y-6">
-            {/* Model Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Informações do Modelo</CardTitle>
+            <Card className="bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600 text-white shadow-xl">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-white text-xl font-semibold">Ações</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-600">Classe</p>
-                    <p className="font-semibold capitalize">{model.class.toLowerCase()}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Total de Fotos</p>
-                    <p className="font-semibold">{model.totalPhotos}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Criado</p>
-                    <p className="font-semibold">{formatDate(model.createdAt)}</p>
-                  </div>
-                  {model.trainedAt && (
-                    <div>
-                      <p className="text-gray-600">Treinado</p>
-                      <p className="font-semibold">{formatDate(model.trainedAt)}</p>
-                    </div>
-                  )}
-                  {model.qualityScore && (
-                    <div>
-                      <p className="text-gray-600">Pontuação de Qualidade</p>
-                      <p className="font-semibold">{Math.round(model.qualityScore * 100)}%</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Training Data */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Dados de Treinamento</CardTitle>
-                <CardDescription>
-                  Fotos usadas para treinar este modelo
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Fotos do Rosto</span>
-                  <span className="font-semibold">{model.facePhotos?.length || 0}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Fotos de Meio Corpo</span>
-                  <span className="font-semibold">{model.halfBodyPhotos?.length || 0}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Fotos de Corpo Inteiro</span>
-                  <span className="font-semibold">{model.fullBodyPhotos?.length || 0}</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Ações</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
                 {model.status === 'READY' && (
                   <>
-                    <Button asChild className="w-full">
+                    <Button asChild className="w-full bg-white text-slate-900 hover:bg-slate-50 hover:text-slate-800 font-semibold py-3 shadow-sm border border-slate-200 transition-all duration-200">
                       <Link href={`/generate?model=${model.id}`}>
-                        <Play className="w-4 h-4 mr-2" />
+                        <Play className="w-4 h-4 mr-2 text-slate-700" />
                         Gerar Fotos
                       </Link>
                     </Button>
-                    
-                    <Button variant="outline" asChild className="w-full">
+
+                    <Button variant="outline" asChild className="w-full border-2 border-slate-300 text-slate-100 bg-slate-700 hover:bg-slate-600 hover:border-slate-200 py-3 font-medium transition-all duration-200 shadow-sm">
                       <Link href={`/gallery?model=${model.id}`}>
                         <Eye className="w-4 h-4 mr-2" />
                         Ver Galeria
@@ -358,13 +266,13 @@ export default async function ModelPage({ params }: ModelPageProps) {
                     </Button>
                   </>
                 )}
-                
-                <Button variant="outline" className="w-full">
+
+                <Button variant="outline" className="w-full border-2 border-slate-300 text-slate-100 bg-slate-700 hover:bg-slate-600 hover:border-slate-200 py-3 font-medium transition-all duration-200 shadow-sm">
                   <Download className="w-4 h-4 mr-2" />
                   Exportar Modelo
                 </Button>
-                
-                <Button variant="destructive" className="w-full">
+
+                <Button variant="destructive" className="w-full bg-red-600 hover:bg-red-500 text-white border-2 border-red-500 hover:border-red-400 py-3 font-medium transition-all duration-200 shadow-sm">
                   <Trash2 className="w-4 h-4 mr-2" />
                   Deletar Modelo
                 </Button>

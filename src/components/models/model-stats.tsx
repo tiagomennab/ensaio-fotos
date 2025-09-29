@@ -1,8 +1,5 @@
 'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Clock, Image, Zap, TrendingUp } from 'lucide-react'
 
 interface ModelStatsProps {
   stats: {
@@ -25,82 +22,66 @@ export function ModelStats({ stats }: ModelStatsProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Generations</CardTitle>
-          <Image className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats.totalGenerations}</div>
-          <p className="text-xs text-muted-foreground">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" style={{fontFamily: '"-apple-system", "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif'}}>
+      <div className="bg-slate-600 border border-slate-500 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-slate-200 tracking-wide">Total Generations</p>
+          <div className="text-3xl font-light text-white">{stats.totalGenerations}</div>
+          <p className="text-xs text-slate-300 font-light">
             Images created with this model
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Avg Processing Time</CardTitle>
-          <Clock className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">
+      <div className="bg-slate-600 border border-slate-500 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-slate-200 tracking-wide">Processing Time</p>
+          <div className="text-3xl font-light text-white">
             {formatTime(stats.averageProcessingTime)}
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-slate-300 font-light">
             Average generation time
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Credits Used</CardTitle>
-          <Zap className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats.totalCreditsUsed}</div>
-          <p className="text-xs text-muted-foreground">
+      <div className="bg-slate-600 border border-slate-500 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-slate-200 tracking-wide">Credits Used</p>
+          <div className="text-3xl font-light text-white">{stats.totalCreditsUsed}</div>
+          <p className="text-xs text-slate-300 font-light">
             Total credits consumed
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
-          <TrendingUp className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats.successRate}%</div>
-          <p className="text-xs text-muted-foreground">
+      <div className="bg-slate-600 border border-slate-500 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-slate-200 tracking-wide">Success Rate</p>
+          <div className="text-3xl font-light text-white">{stats.successRate}%</div>
+          <p className="text-xs text-slate-300 font-light">
             Successful generations
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Popular Prompts */}
       {stats.popularPrompts.length > 0 && (
-        <Card className="md:col-span-2 lg:col-span-4">
-          <CardHeader>
-            <CardTitle className="text-lg">Most Used Prompts</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {stats.popularPrompts.slice(0, 5).map((prompt, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <span className="text-sm truncate flex-1 mr-4">
-                    {prompt.prompt}
-                  </span>
-                  <Badge variant="secondary">
-                    {prompt.count} uses
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="md:col-span-2 lg:col-span-4 bg-slate-600 border border-slate-500 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
+          <h3 className="text-lg font-medium text-slate-200 tracking-wide mb-4">Most Used Prompts</h3>
+          <div className="space-y-3">
+            {stats.popularPrompts.slice(0, 5).map((prompt, index) => (
+              <div key={index} className="flex items-center justify-between py-2">
+                <span className="text-sm text-slate-300 truncate flex-1 mr-4 font-light">
+                  {prompt.prompt}
+                </span>
+                <span className="text-xs text-slate-400 bg-slate-700 px-2 py-1 rounded-full font-medium">
+                  {prompt.count} uses
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   )
